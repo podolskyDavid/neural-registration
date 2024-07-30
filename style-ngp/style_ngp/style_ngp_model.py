@@ -1,12 +1,7 @@
-"""
-Template Model File
-
-Currently this subclasses the Nerfacto model. Consider subclassing from the base Model.
-"""
 from dataclasses import dataclass, field
 from typing import Type
 
-from nerfstudio.models.instant_ngp import InstantNGPModelConfig, NGPModel # for subclassing InstantNGP model
+from nerfstudio.models.instant_ngp import InstantNGPModelConfig, NGPModel  # for subclassing InstantNGP model
 from style_ngp.style_ngp_field import StyleNGPField
 
 # import all the other necessary imports
@@ -17,6 +12,10 @@ from nerfstudio.model_components.losses import MSELoss
 
 from torch.nn import Parameter
 import nerfacc
+
+import torch
+import torch.optim as optim
+
 
 @dataclass
 class StyleNGPModelConfig(InstantNGPModelConfig):
@@ -86,3 +85,49 @@ class StyleNGPModel(NGPModel):
         self.psnr = PeakSignalNoiseRatio(data_range=1.0)
         self.ssim = structural_similarity_index_measure
         self.lpips = LearnedPerceptualImagePatchSimilarity(normalize=True)
+
+    def optimize_xyz(self, target_position, initial_position, angles, lr=0.01, num_iterations=1000):
+        # Convert initial position to tensor
+        position = torch.tensor(initial_position, requires_grad=True, device=self.device)
+
+        # Target image
+        target_image = self.generate_image(target_position, angles)
+        target_image = torch.tensor(target_image, requires_grad=False, device=self.device)
+
+        # Optimizer
+        optimizer = optim.Adam([position], lr=lr)
+
+        for iteration in range(num_iterations):
+            optimizer.zero_grad()
+
+            # Generate the starting image with the current position
+            starting_image = self.generate_image(position, angles)
+            starting_image = torch.tensor(starting_image, requires_grad=False, device=self.device)
+
+            # Compute the loss (MSE)
+            loss = torch.mean((starting_image - target_image) ** 2)
+
+            # Backpropagation
+            loss.backward()
+
+            # Update the position
+            optimizer.step()
+
+            if iteration % 100 == 0:
+                print(f"Iteration {iteration}, Loss: {loss.item()}")
+
+        optimized_position = position.detach().cpu().numpy()
+        print(f"Optimized Position: {optimized_position}")
+        return optimized_position
+
+    def generate_image(self, position, angles):
+        # Generate the image using the position and angles
+        ray_bundle = self.get_ray_bundle(position, angles)
+        outputs = self.get_outputs(ray_bundle)
+        image = outputs['rgb'].cpu().detach().numpy()
+        return image
+
+    def get_ray_bundle(self, position, angles):
+        # Create a RayBundle from position and angles
+        # Implement this based on how your model expects the ray inputs
+        pass

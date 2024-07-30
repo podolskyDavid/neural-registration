@@ -6,15 +6,9 @@ from torch import Tensor, nn
 from nerfstudio.cameras.rays import RaySamples
 from nerfstudio.data.scene_box import SceneBox
 from nerfstudio.field_components.activations import trunc_exp
-from nerfstudio.field_components.embedding import Embedding
 from nerfstudio.field_components.encodings import NeRFEncoding, SHEncoding
 from nerfstudio.field_components.field_heads import (
     FieldHeadNames,
-    PredNormalsFieldHead,
-    SemanticFieldHead,
-    TransientDensityFieldHead,
-    TransientRGBFieldHead,
-    UncertaintyFieldHead,
 )
 from nerfstudio.field_components.mlp import MLP, MLPWithHashEncoding
 from nerfstudio.fields.base_field import Field, get_normalized_directions
@@ -25,7 +19,6 @@ import hyperlight as hl
 
 import math
 
-import os
 
 class StyleNGPField(Field):
     """Compound Field
@@ -48,21 +41,21 @@ class StyleNGPField(Field):
     aabb: Tensor
 
     def __init__(
-        self,
-        aabb: Tensor,
-        num_images: int,
-        num_layers: int = 2,
-        hidden_dim: int = 64,
-        geo_feat_dim: int = 15,
-        num_levels: int = 16,
-        base_res: int = 16,
-        max_res: int = 2048,
-        log2_hashmap_size: int = 19,
-        num_layers_color: int = 2,
-        features_per_level: int = 2,
-        hidden_dim_color: int = 8,
-        average_init_density: float = 1.0,
-        implementation: Literal["tcnn", "torch"] = "tcnn",
+            self,
+            aabb: Tensor,
+            num_images: int,
+            num_layers: int = 2,
+            hidden_dim: int = 64,
+            geo_feat_dim: int = 15,
+            num_levels: int = 16,
+            base_res: int = 16,
+            max_res: int = 2048,
+            log2_hashmap_size: int = 19,
+            num_layers_color: int = 2,
+            features_per_level: int = 2,
+            hidden_dim_color: int = 8,
+            average_init_density: float = 1.0,
+            implementation: Literal["tcnn", "torch"] = "tcnn",
     ) -> None:
         # Call the superclass with the same arguments
         super().__init__()
@@ -307,16 +300,16 @@ class StyleNGPField(Field):
             pred_params_list.append(pred_params)
 
         pred_params_tensor = torch.cat(pred_params_list, dim=-1)
-        new_params = {"tcnn_encoding.params": pred_params_tensor.view(-1,)}
+        new_params = {"tcnn_encoding.params": pred_params_tensor.view(-1, )}
         return new_params
-    
+
     def update_style_img(self, img_path):
         # Compute style features and move to GPU
         self.style_features = self.feature_extractor.get_hist(img_path).to("cuda:0")
         return
 
     def get_outputs(
-        self, ray_samples: RaySamples, density_embedding: Optional[Tensor] = None
+            self, ray_samples: RaySamples, density_embedding: Optional[Tensor] = None
     ) -> Dict[FieldHeadNames, Tensor]:
         assert density_embedding is not None
         outputs = {}
