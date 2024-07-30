@@ -56,6 +56,7 @@ class HistogramExtractor:
     '''
     Extracts the histogram of an image
     '''
+
     def get_hist(self, img_path):
         # Load the image directly into a tensor
         image_tensor = torchvision.io.read_image(img_path).float() / 255.0
@@ -79,7 +80,6 @@ class HistogramExtractor:
         hist_flattened = hist_tensor.view(1, -1)
 
         return hist_flattened
-
 
     def get_moments(self, img_path):
         # Load the image directly into a tensor
@@ -119,4 +119,3 @@ class SimpleFeatureExtractor(nn.Module):
         h = self.pool(h)
         h = self.flatten(h)
         return h
-

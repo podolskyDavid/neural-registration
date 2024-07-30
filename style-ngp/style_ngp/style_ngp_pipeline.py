@@ -15,7 +15,6 @@ import os
 
 from nerfstudio.viewer.viewer_elements import ViewerDropdown
 
-
 import numpy as np
 
 
@@ -90,13 +89,13 @@ class StyleNGPPipeline(DynamicBatchPipeline):
     """
 
     def __init__(
-        self,
-        config: StyleNGPPipelineConfig,
-        device: str,
-        test_mode: Literal["test", "val", "inference"] = "val",
-        world_size: int = 1,
-        local_rank: int = 0,
-        grad_scaler: Optional[GradScaler] = None,
+            self,
+            config: StyleNGPPipelineConfig,
+            device: str,
+            test_mode: Literal["test", "val", "inference"] = "val",
+            world_size: int = 1,
+            local_rank: int = 0,
+            grad_scaler: Optional[GradScaler] = None,
     ):
         super().__init__(config, device, test_mode, world_size, local_rank, grad_scaler)
 
@@ -149,11 +148,11 @@ class StyleNGPPipeline(DynamicBatchPipeline):
         else:
             self.model.field.update_style_img(os.path.join(self.config.test_style_dir, style_name))
 
-
     def get_train_loss_dict(self, step: int):
         # Activate hypernetwork after some training on initial data set
         if step == self.structure_train_steps:
             self.model.field.activate_hypernetwork()
+
 
         if step == self.structure_train_steps or \
                 (step > self.structure_train_steps and step % self.rgb_train_steps == 0):

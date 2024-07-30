@@ -1,0 +1,13 @@
+[project]
+name = "nerf_inversion"
+description = "Implementation of the NeRF inversion."
+version = "0.0.1"
+
+dependencies = ["nerfstudio >= 0.3.0"] 
+
+[tool.setuptools.packages.find]
+include = ["nerf_inv*"] # name of the directory with the code
+
+# register the entry point of your new method here:
+[project.entry-points.'nerfstudio.method_configs']
+nerf-inv = 'nerf_inv.nerf_inv_config:nerf_inv'
