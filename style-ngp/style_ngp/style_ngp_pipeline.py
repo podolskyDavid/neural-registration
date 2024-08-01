@@ -153,7 +153,6 @@ class StyleNGPPipeline(DynamicBatchPipeline):
         if step == self.structure_train_steps:
             self.model.field.activate_hypernetwork()
 
-
         if step == self.structure_train_steps or \
                 (step > self.structure_train_steps and step % self.rgb_train_steps == 0):
             # Generate random index for next dataset

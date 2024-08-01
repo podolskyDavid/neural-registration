@@ -24,10 +24,10 @@ from nerfstudio.engine.trainer import TrainerConfig
 from nerfstudio.plugins.types import MethodSpecification
 
 # from nerfstudio.models.instant_ngp import InstantNGPModelConfig
-from style_ngp.style_ngp_model import StyleNGPModelConfig
+from style_ngp_model import StyleNGPModelConfig
 from nerfstudio.data.datamanagers.base_datamanager import VanillaDataManagerConfig
 
-from style_ngp.style_ngp_pipeline import StyleNGPPipelineConfig
+from style_ngp_pipeline import StyleNGPPipelineConfig
 
 style_ngp = MethodSpecification(
     config=TrainerConfig(

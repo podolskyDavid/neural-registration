@@ -1,6 +1,7 @@
 from torchvision import transforms
 from torchvision.io import read_image
 
+
 def load_img(img_path):
     if img_path is None:
         raise ValueError("Style image path is None.")
@@ -26,4 +27,3 @@ def load_img(img_path):
     image = normalize(image)
 
     return image
-
