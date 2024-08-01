@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Type
 
 from nerfstudio.models.instant_ngp import InstantNGPModelConfig, NGPModel  # for subclassing InstantNGP model
-from style_ngp.style_ngp_field import StyleNGPField
+from style_ngp_field import StyleNGPField
 
 # import all the other necessary imports
 from nerfstudio.field_components.spatial_distortions import SceneContraction

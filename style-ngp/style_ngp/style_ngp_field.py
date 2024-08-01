@@ -13,7 +13,7 @@ from nerfstudio.field_components.field_heads import (
 from nerfstudio.field_components.mlp import MLP, MLPWithHashEncoding
 from nerfstudio.fields.base_field import Field, get_normalized_directions
 
-from style_ngp.field_components import HistogramExtractor
+from field_components import HistogramExtractor
 
 import hyperlight as hl
 
