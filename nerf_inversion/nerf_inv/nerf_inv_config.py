@@ -6,7 +6,7 @@ Define your custom method here that registers with Nerfstudio CLI.
 
 from __future__ import annotations
 
-from nerf_inv.template_datamanager import (
+from nerf_inversion.nerf_inv.template_datamanager import (
     TemplateDataManagerConfig,
 )
 from method_template.template_model import TemplateModelConfig
