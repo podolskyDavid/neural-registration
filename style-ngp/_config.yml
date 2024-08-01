@@ -1,3 +1,0 @@
-# Exclude the submodule directory
-exclude:
-  - "ParallelInversion*"
