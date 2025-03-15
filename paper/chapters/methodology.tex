@@ -1,0 +1,150 @@
+\chapter{Methodology}
+
+This chapter presents the theoretical foundation and methodological approach of our NeRF-based intraoperative registration framework. We begin by formulating the registration problem, then describe our approach to solving it using Neural Radiance Fields, various loss functions, and hypernetwork-based style transfer.
+
+\section{Problem Formulation}
+The intraoperative registration problem can be formulated as finding the optimal transformation $T$ that aligns a preoperative model with an intraoperative image. In our approach, we represent the preoperative model as a Neural Radiance Field $F_\Theta$ and seek to find the camera pose $P$ that, when used to render an image from the NeRF, produces an image that best matches the intraoperative image $I_{target}$.
+
+Mathematically, we can express this as:
+
+\begin{equation}
+P^* = \argmin_P \mathcal{L}(R(F_\Theta, P), I_{target})
+\end{equation}
+
+where $R(F_\Theta, P)$ is the rendering function that produces an image from the NeRF $F_\Theta$ using camera pose $P$, and $\mathcal{L}$ is a loss function that measures the similarity between the rendered image and the target intraoperative image.
+
+\section{NeRF-based Registration Framework}
+Our framework consists of the following components:
+
+\subsection{Neural Radiance Field Representation}
+We use a pre-trained NeRF as an implicit, differentiable representation of the brain surface. The NeRF is trained on preoperative MRI data and encodes both the geometry (density) and appearance (color) of the brain.
+
+The key advantage of using a NeRF for registration is its differentiable nature, which allows us to backpropagate through the rendering process to optimize camera poses. This is in contrast to traditional mesh-based approaches, which require explicit correspondence matching or iterative closest point algorithms.
+
+\subsection{Camera Pose Optimization}
+Given a target intraoperative image, we optimize the camera pose parameters (rotation and translation) to minimize the difference between the rendered NeRF view and the target image. The optimization process follows these steps:
+
+\begin{enumerate}
+    \item Initialize the camera pose $P_0$ based on prior knowledge or a reasonable starting point
+    \item Render an image $I_{rendered} = R(F_\Theta, P_i)$ from the current pose
+    \item Compute the loss $\mathcal{L}(I_{rendered}, I_{target})$
+    \item Backpropagate the loss to update the pose parameters: $P_{i+1} = P_i - \alpha \nabla_P \mathcal{L}$
+    \item Repeat steps 2-4 until convergence or a maximum number of iterations is reached
+\end{enumerate}
+
+where $\alpha$ is the learning rate for the optimization process.
+
+\subsection{Constrained Optimization}
+In the context of neurosurgery, we can make certain assumptions to constrain the optimization problem:
+
+\begin{itemize}
+    \item The distance from the camera to the brain surface is approximately constant during the procedure
+    \item The orientation of the camera is constrained by the surgical approach
+    \item The brain surface visible in the intraoperative image corresponds to a specific region of interest in the preoperative model
+\end{itemize}
+
+These constraints can be incorporated into the optimization process to improve convergence and accuracy.
+
+\section{Loss Functions}
+A critical component of our framework is the choice of loss function $\mathcal{L}$ that measures the similarity between the rendered NeRF view and the target intraoperative image. We investigate several loss functions:
+
+\subsection{Pixel-wise Losses}
+\subsubsection{L2 Loss}
+The L2 loss computes the mean squared error between the rendered and target images:
+
+\begin{equation}
+\mathcal{L}_{L2}(I_{rendered}, I_{target}) = \frac{1}{N} \sum_{i=1}^{N} (I_{rendered}^i - I_{target}^i)^2
+\end{equation}
+
+where $N$ is the number of pixels in the image.
+
+\subsubsection{Weighted/Masked L2 Loss}
+To focus the optimization on relevant regions of the image, we introduce a weighted L2 loss:
+
+\begin{equation}
+\mathcal{L}_{weighted}(I_{rendered}, I_{target}) = \frac{1}{N} \sum_{i=1}^{N} w_i (I_{rendered}^i - I_{target}^i)^2
+\end{equation}
+
+where $w_i$ is a weight assigned to pixel $i$. These weights can be determined based on segmentation masks, edge detection, or other relevance criteria.
+
+\subsection{Structural Losses}
+\subsubsection{Normalized Cross-Correlation (NCC)}
+NCC measures the similarity between two signals, normalized to be invariant to linear transformations:
+
+\begin{equation}
+\mathcal{L}_{NCC}(I_{rendered}, I_{target}) = -\frac{\sum_{i=1}^{N} (I_{rendered}^i - \bar{I}_{rendered})(I_{target}^i - \bar{I}_{target})}{\sqrt{\sum_{i=1}^{N} (I_{rendered}^i - \bar{I}_{rendered})^2 \sum_{i=1}^{N} (I_{target}^i - \bar{I}_{target})^2}}
+\end{equation}
+
+where $\bar{I}$ represents the mean intensity of image $I$.
+
+\subsubsection{Structural Similarity Index (SSIM)}
+SSIM \cite{wang2004image} measures the structural similarity between images, accounting for luminance, contrast, and structure:
+
+\begin{equation}
+\mathcal{L}_{SSIM}(I_{rendered}, I_{target}) = 1 - \frac{(2\mu_x\mu_y + C_1)(2\sigma_{xy} + C_2)}{(\mu_x^2 + \mu_y^2 + C_1)(\sigma_x^2 + \sigma_y^2 + C_2)}
+\end{equation}
+
+where $\mu_x$, $\mu_y$ are the means, $\sigma_x$, $\sigma_y$ are the variances, and $\sigma_{xy}$ is the covariance of the rendered and target images. $C_1$ and $C_2$ are constants to stabilize the division.
+
+\subsection{Information-Theoretic Losses}
+\subsubsection{Mutual Information (MI)}
+MI measures the statistical dependence between two random variables:
+
+\begin{equation}
+\mathcal{L}_{MI}(I_{rendered}, I_{target}) = -\sum_{x,y} p(x,y) \log \frac{p(x,y)}{p(x)p(y)}
+\end{equation}
+
+where $p(x,y)$ is the joint probability distribution of the intensities in the rendered and target images, and $p(x)$ and $p(y)$ are the marginal distributions.
+
+\section{Hypernetwork-based Style Transfer}
+To address the cross-modal nature of the registration problem (aligning preoperative MRI-derived NeRFs with intraoperative optical images), we employ hypernetwork-based style transfer.
+
+\subsection{Hypernetwork Architecture}
+Our hypernetwork $H_\Phi$ takes as input a style code $s$ representing the target modality and generates modulation parameters for the NeRF:
+
+\begin{equation}
+\Theta_{style} = H_\Phi(s)
+\end{equation}
+
+These modulation parameters are then applied to the NeRF to adapt its rendering style:
+
+\begin{equation}
+F_{\Theta, style}(x, y, z, \theta, \phi) = M(F_\Theta(x, y, z, \theta, \phi), \Theta_{style})
+\end{equation}
+
+where $M$ is a modulation function that applies the style parameters to the NeRF output.
+
+\subsection{Style Encoding Methods}
+We investigate various methods for encoding the style information:
+
+\subsubsection{Y'UV Color Space}
+Converting images to Y'UV color space separates luminance (Y') from chrominance (U, V), allowing for more effective style transfer by modulating these components independently.
+
+\subsubsection{Histogram of Oriented Gradients (HOG)}
+HOG features capture the distribution of gradient orientations in the image, providing a representation that is robust to changes in illumination and small geometric transformations.
+
+\subsubsection{Texture-based Features}
+Gabor filters and other texture descriptors can capture the characteristic patterns in different imaging modalities, facilitating cross-modal style transfer.
+
+\subsubsection{Edge Detection and Contour Matching}
+Edge maps provide a modality-invariant representation of the underlying structures, which can be used to guide the registration process.
+
+\subsubsection{Gram Matrices}
+Gram matrices, computed from feature maps of pre-trained convolutional networks, capture the statistical correlations between features and have been shown to effectively represent style information.
+
+\subsubsection{Deep Feature Matching}
+Features extracted from intermediate layers of pre-trained convolutional networks can provide a rich representation for cross-modal matching.
+
+\section{Experimental Design}
+To evaluate our framework, we design experiments that assess:
+
+\begin{itemize}
+    \item The accuracy of registration using different loss functions
+    \item The effectiveness of hypernetwork-based style transfer for cross-modal registration
+    \item The computational efficiency and convergence properties of the optimization process
+    \item The robustness of the registration to variations in the initial pose estimate
+\end{itemize}
+
+For each experiment, we use synthetic data generated from the same NeRF model to eliminate confounding factors related to imperfections in the NeRF representation. This allows us to isolate and study the effects of different loss functions and hypernetwork approaches on registration accuracy.
+
+In the next chapter, we describe the implementation details of our framework, including the specific NeRF architecture, optimization algorithms, and hypernetwork design. 

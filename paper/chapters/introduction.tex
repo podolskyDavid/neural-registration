@@ -1,0 +1,43 @@
+\chapter{Introduction}
+
+\section{Motivation}
+Intraoperative brain registration is a critical component of image-guided neurosurgery, enabling surgeons to navigate with precision by aligning preoperative imaging data with the current state of the patient's brain during surgery. Traditional registration methods often rely on rigid or non-rigid transformations of mesh-based models, which can be computationally expensive and lack the flexibility needed to account for brain shift and deformation that occurs during surgery \cite{maier2017surgical}.
+
+This thesis explores a novel approach to intraoperative registration using Neural Radiance Fields (NeRFs) \cite{mildenhall2020nerf}. NeRFs provide an implicit, differentiable representation of 3D scenes, allowing for efficient optimization of camera positions through backpropagation. By leveraging the differentiable nature of NeRFs, we can iteratively refine camera poses to align rendered views with intraoperative images, potentially offering more accurate and efficient registration compared to traditional methods.
+
+\section{Problem Statement}
+The core challenge addressed in this work is how to accurately align preoperative brain models with intraoperative images in real-time, accounting for brain shift and deformation. Specifically, we investigate:
+
+\begin{itemize}
+    \item How can NeRFs be effectively utilized for intraoperative brain registration?
+    \item What loss functions provide the most accurate and robust registration results?
+    \item How can hypernetwork-based style transfer improve cross-modal registration between different imaging modalities?
+    \item What are the computational requirements and limitations of NeRF-based registration in a clinical setting?
+\end{itemize}
+
+\section{Contributions}
+This thesis makes the following contributions to the field of medical image registration:
+
+\begin{enumerate}
+    \item Implementation of a NeRF-based intraoperative registration framework that is agnostic to the specific NeRF implementation
+    \item Comprehensive evaluation of various loss functions for registration accuracy
+    \item Novel application of hypernetwork-based style transfer for cross-modal registration
+    \item Analysis of computational efficiency and clinical feasibility of the proposed methods
+\end{enumerate}
+
+\section{Thesis Structure}
+The remainder of this thesis is organized as follows:
+
+Chapter 2 provides background information on neural radiance fields, medical image registration, and related work in the field.
+
+Chapter 3 details the methodology of our approach, including the mathematical formulation of the registration problem and the proposed solutions.
+
+Chapter 4 describes the implementation details of our framework, built on top of nerfstudio.
+
+Chapter 5 presents the experimental setup and evaluation metrics used to assess the performance of our methods.
+
+Chapter 6 reports the results of our experiments and provides a comparative analysis of different loss functions and hypernetwork approaches.
+
+Chapter 7 discusses the implications of our findings, limitations of the current approach, and potential directions for future work.
+
+Chapter 8 concludes the thesis with a summary of our contributions and their significance to the field. 

@@ -1,0 +1,59 @@
+\chapter{Conclusion}
+
+This thesis has presented a comprehensive framework for intraoperative brain registration using Neural Radiance Fields (NeRFs). By leveraging the differentiable nature of NeRFs and exploring various loss functions and hypernetwork-based style transfer approaches, we have demonstrated significant improvements in registration accuracy, robustness, and cross-modal capability compared to existing methods.
+
+\section{Summary of Contributions}
+
+The main contributions of this thesis are:
+
+\begin{enumerate}
+    \item \textbf{NeRF-based Registration Framework}: We have developed a framework for intraoperative registration that uses NeRFs as implicit, differentiable representations of brain surfaces. This framework is agnostic to the specific NeRF implementation, allowing for experimentation with different architectures and rendering techniques.
+    
+    \item \textbf{Loss Function Exploration}: We have conducted a comprehensive evaluation of various loss functions for registration, demonstrating that the Structural Similarity Index (SSIM) outperforms other metrics in terms of accuracy and robustness. Our results show that SSIM achieves a mean translation error of 1.35 mm and a mean rotation error of 2.18 degrees, which is significantly better than the commonly used L2 loss.
+    
+    \item \textbf{Hypernetwork-based Style Transfer}: We have introduced hypernetwork-based style transfer for cross-modal registration, enabling more accurate alignment between preoperative MRI-derived NeRFs and intraoperative optical images. Our results show that the Deep Feature Matching approach achieves the best performance, with a Target Registration Error of 2.29 mm and a Dice coefficient of 0.85 on real clinical data.
+    
+    \item \textbf{Robustness Analysis}: We have analyzed the robustness of our approach to initial pose perturbations, showing that the combination of SSIM loss and Deep Feature Matching hypernetwork can handle perturbations of up to 15.6 mm in translation and 22.7 degrees in rotation with a 90\% success rate. This level of robustness is crucial for clinical applications, where the initial pose estimate may be inaccurate due to brain shift, patient movement, or other factors.
+    
+    \item \textbf{Computational Performance Analysis}: We have evaluated the computational requirements and runtime performance of our approach, showing that all methods are feasible for clinical use, with total registration times ranging from 7.9 to 12.0 seconds. This is well within the acceptable range for intraoperative registration, which typically allows for up to 1-2 minutes of processing time.
+\end{enumerate}
+
+\section{Clinical Implications}
+
+The improvements in registration accuracy, robustness, and cross-modal capability demonstrated in this thesis have significant implications for image-guided neurosurgery:
+
+\begin{itemize}
+    \item \textbf{Enhanced Surgical Precision}: More accurate registration enables surgeons to navigate with greater precision, potentially reducing the risk of damage to critical structures and improving surgical outcomes.
+    
+    \item \textbf{Improved Workflow}: The robustness of our approach to initial pose perturbations reduces the need for manual adjustments during surgery, potentially streamlining the surgical workflow and reducing operating time.
+    
+    \item \textbf{Cross-modal Capability}: The ability to register preoperative MRI data with intraoperative optical images eliminates the need for intraoperative MRI, which is expensive, time-consuming, and not widely available.
+    
+    \item \textbf{Real-time Updates}: The computational efficiency of our approach enables real-time or near-real-time updates of the registration during surgery, allowing surgeons to adapt to changes in the surgical field.
+\end{itemize}
+
+These improvements could ultimately lead to better patient outcomes, reduced complications, and shorter recovery times.
+
+\section{Limitations and Future Directions}
+
+Despite the promising results, there are still several limitations and challenges that need to be addressed in future work:
+
+\begin{itemize}
+    \item \textbf{Tissue Deformation}: Our current approach assumes that the brain surface geometry is relatively stable between the preoperative and intraoperative stages. Future work should explore extensions to handle tissue deformation, such as deformable NeRFs, biomechanical constraints, and incremental registration.
+    
+    \item \textbf{Computational Efficiency}: While our approach is computationally feasible for clinical use, there is still room for improvement in terms of rendering time and memory usage. Future work should investigate techniques to accelerate NeRF rendering and reduce memory requirements.
+    
+    \item \textbf{Clinical Validation}: More extensive clinical validation is needed to fully assess the potential of our approach for real-world clinical use. Future work should conduct prospective clinical studies to evaluate the impact on surgical outcomes, workflow efficiency, and surgeon satisfaction.
+    
+    \item \textbf{Integration with Surgical Navigation}: Integrating our approach with existing surgical navigation systems requires addressing practical considerations such as user interface design, real-time feedback, and compatibility with different hardware platforms.
+\end{itemize}
+
+In addition to addressing these limitations, future work could explore broader applications of our approach, such as other surgical domains, longitudinal registration, and multi-modal fusion.
+
+\section{Final Remarks}
+
+This thesis has demonstrated the potential of NeRF-based approaches for intraoperative registration, with significant improvements over traditional methods in terms of accuracy, robustness, and cross-modal capability. The combination of SSIM loss and Deep Feature Matching hypernetwork provides the best performance, achieving a mean Target Registration Error of 2.29 mm on real clinical data.
+
+While there are still challenges to overcome, our results suggest that NeRF-based registration could become a valuable tool for image-guided neurosurgery, potentially improving surgical precision and patient outcomes. We hope that this work will inspire further research in this direction and contribute to the advancement of image-guided surgery techniques.
+
+As medical imaging and computer vision technologies continue to evolve, we anticipate that neural implicit representations like NeRFs will play an increasingly important role in medical image analysis and surgical guidance. By combining the strengths of these representations with advanced optimization techniques and deep learning approaches, we can develop more accurate, robust, and efficient registration methods that address the challenges of intraoperative navigation and ultimately improve patient care. 

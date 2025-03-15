@@ -1,0 +1,106 @@
+% Bachelor's Thesis on NeRF-based Intraoperative Registration
+% Main document
+
+\documentclass[12pt,a4paper]{report}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{biblatex}
+\usepackage{csquotes}
+
+\DeclareMathOperator{\argmin}{arg\,min}
+
+% Bibliography setup
+\addbibresource{references.bib}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    citecolor=green,
+    pdftitle={NeRF-based Intraoperative Registration},
+    pdfauthor={Your Name},
+    pdfkeywords={NeRF, Neural Radiance Fields, Intraoperative Registration, Brain Surface, Neurosurgery},
+}
+
+% Code listing setup
+\lstset{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny,
+    numbersep=5pt,
+    frame=single,
+    breaklines=true,
+    breakatwhitespace=true,
+    showstringspaces=false,
+}
+
+% Document
+\begin{document}
+
+% Front matter
+\input{titlepage}
+\pagenumbering{roman}
+
+% Abstract
+\begin{abstract}
+This thesis explores the application of Neural Radiance Fields (NeRFs) for intraoperative brain registration. Unlike traditional mesh-based approaches, NeRFs provide a differentiable, implicit function of the brain's geometry and appearance, enabling optimization of camera positions through backpropagation for precise alignment of preoperative and intraoperative brain images. We investigate various loss functions and hypernetwork style transfer techniques to improve registration accuracy.
+\end{abstract}
+
+% Table of contents
+\tableofcontents
+\listoffigures
+\listoftables
+
+% Main matter
+\pagenumbering{arabic}
+
+% Introduction
+\input{chapters/introduction}
+
+% Background
+\input{chapters/background}
+
+% Methodology
+\input{chapters/methodology}
+
+% Implementation
+\input{chapters/implementation}
+
+% Experiments
+\input{chapters/experiments}
+
+% Results
+\input{chapters/results}
+
+% Discussion
+\input{chapters/discussion}
+
+% Conclusion
+\input{chapters/conclusion}
+
+% Bibliography
+\printbibliography
+
+% Appendices
+\appendix
+\input{chapters/appendix}
+
+\end{document} 
