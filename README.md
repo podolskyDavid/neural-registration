@@ -11,7 +11,7 @@ This repository implements advanced intraoperative brain registration using Neur
 - A pre-trained NeRF from brain MR scans (density and coloring). This NeRF is an “implicit, differentiable representation” of the brain surface. Meaning we can backprop through it.
 - During the surgery we can take a snapshots of the brain surface.
 ### **Goal:**
-- Iteratively, through backpropagation of an error, align the camera angle, so that the final iterated snapshot of the NeRF is equal (up to a certain error) to the goal image (real brain surface image).
+- Iteratively, through backpropagation of an error (while keeping the pre-trained NeRF weights frozen), align the camera angle, so that the final iterated snapshot of the NeRF is equal (up to a certain error) to the goal image (real brain surface image).
 ### Assumptions and the setup:
 - Pre-trained NeRF’s density and coloring is a “perfect” representation of the real brain surface (perfecting the coloring and the density of the NeRF is a separate problem). Therefore, we simulate the experiment by sampling both the iterative snapshots and the final goal image form the same NeRF model (to eliminate lighting and other relevant noise. this is the next step in the research)
 - The distance from the object is constant. E.g., whenever we take a snapshot it is always going to be from the same distance as the final goal image
