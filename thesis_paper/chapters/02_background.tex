@@ -1,23 +1,44 @@
 % !TeX root = ../main.tex
 
-\chapter{Background and Related Work}\label{chapter:background}
+\chapter{Theoretical Background and Related Work}\label{chapter:background}
 
-This chapter provides the necessary theoretical foundation and contextual background for understanding the work presented in this thesis. We first review the field of intraoperative registration, followed by an overview of Neural Radiance Fields (NeRFs) and their applications in pose estimation. Finally, we discuss relevant work on loss functions for image registration and style transfer techniques.
+%This chapter provides the necessary theoretical foundation and contextual background for understanding the work presented in this thesis. We first review the field of intraoperative registration, followed by an overview of Neural Radiance Fields (NeRFs) and their applications in pose estimation. Finally, we discuss relevant work on loss functions for image registration and style transfer techniques.
+
+\section{Neural Networks and Backpropagation}
+
+Neural Radiance Field (NeRF) models are fundamentally based on artificial neural networks (ANNs). ANNs are computational models comprising interconnected processing units or "neurons," arranged in layers that transform input data through a series of non-linear functions to produce output predictions\parencite{Han2018Artificial}. Formally, each neuron computes a weighted sum of its inputs, applies a non-linear activation function $\sigma(\cdot)$, and passes the result to subsequent neurons:
+
+\begin{equation}
+y = \sigma\left(\sum_{i=1}^{n} w_i x_i + b\right)
+\end{equation}
+
+\noindent where $w_i$ represents the weights, $x_i$ the inputs, and $b$ the bias term.
+
+Neural networks optimize their parameters through gradient-based learning algorithms, predominantly backpropagation coupled with stochastic gradient descent (SGD) or its variants. The training process involves forward propagation of input data through the network, yielding predictions that are evaluated against ground truth via a differentiable loss function $\mathcal{L}(\theta)$, where $\theta$ represents the network parameters. Backpropagation then computes the gradient $\nabla_\theta \mathcal{L}(\theta)$ by recursively applying the chain rule of differentiation to determine each parameter's contribution to the total error.
+
+Parameter updates proceed iteratively according to:
+
+\begin{equation}
+\theta_{t+1} = \theta_t - \eta \nabla_\theta \mathcal{L}(\theta_t)
+\end{equation}
+
+\noindent where $\eta$ denotes the learning rate that governs the magnitude of parameter adjustments. This optimization process continues over multiple epochs as the network processes mini-batches of training data, progressively minimizing the objective function and improving the model's predictive performance.
 
 \section{Intraoperative Registration in Neurosurgery}
 
-Intraoperative registration refers to the process of aligning preoperative imaging data, such as Magnetic Resonance Imaging (MRI) scans, with the patient's physical anatomy during surgery. This alignment enables surgeons to navigate with respect to preoperative imaging data, which provides crucial information about anatomical structures not visible on the brain surface, such as tumor boundaries and critical functional areas.
+Intraoperative registration is an essential component of neurosurgical procedures, involving the precise alignment of preoperative imaging data with the patient's actual anatomy during surgery. The primary goal of intraoperative registration is to create an accurate spatial correspondence between the preoperative images — usually Magnetic Resonance Imaging (MRI) — and the physical patient. \textcite{fehrentz2024intraoperative} This alignment ensures surgeons can reliably utilize the rich anatomical information provided by preoperative images, thereby improving surgical accuracy, reducing complications, and enhancing patient safety.
 
+Various registration methods have been developed to achieve this alignment, ranging from traditional approaches, such as point-based, surface-based, and volume-based techniques, to more complex methods like cross-modal registration. These techniques differ significantly in terms of their computational complexity, equipment requirements, accuracy, and adaptability to intraoperative changes such as brain shift and tissue deformation.
 \subsection{Traditional Registration Approaches}
 
 Traditional approaches to intraoperative registration in neurosurgery can be broadly categorized into the following methods:
 
 \begin{itemize}
-    \item \textbf{Point-based registration}: This approach identifies and matches corresponding anatomical landmarks or artificially placed fiducial markers in both the preoperative images and physical patient. While conceptually simple, it requires accurate identification of landmarks and can be time-consuming.
+    \item \textbf{Point-based registration}: This approach identifies and matches corresponding anatomical landmarks or artificially placed fiducial markers in both the preoperative images and physical patient. While conceptually simple, it requires accurate identification of landmarks and can be time-consuming. \parencite{Fitzpatrick1998Predicting}
     
-    \item \textbf{Surface-based registration}: This technique matches surfaces extracted from preoperative imaging with surfaces captured intraoperatively, often using techniques like the Iterative Closest Point (ICP) algorithm. Surface-based approaches typically require specialized equipment, such as laser scanners or stereo cameras, to capture the intraoperative surface.
+    \item \textbf{Surface-based registration}: This technique matches surfaces extracted from preoperative imaging with surfaces captured intraoperatively, often using techniques like the Iterative Closest Point (ICP) algorithm. Surface-based approaches typically require specialized equipment, such as laser scanners or stereo cameras, to capture the intraoperative surface. \parencite{CLARKSON2011856}
     
-    \item \textbf{Volume-based registration}: These methods use intensity-based similarity measures to align volumetric images, but they typically require intraoperative imaging modalities such as ultrasound or intraoperative MRI, which may not be available in all surgical settings.
+    \item \textbf{Volume-based registration}: These methods use intensity-based similarity measures to align volumetric images, but they typically require intraoperative imaging modalities such as ultrasound or intraoperative MRI, which may not be available in all surgical settings. \parencite{Klein2010Evaluation}
 \end{itemize}
 
 A significant challenge in neurosurgical registration is brain shift, the deformation of brain tissue that occurs during surgery due to factors such as gravity, cerebrospinal fluid drainage, and surgical manipulations. This phenomenon can significantly reduce the accuracy of rigid registration methods and necessitates more advanced techniques.
@@ -27,9 +48,9 @@ A significant challenge in neurosurgical registration is brain shift, the deform
 Cross-modal registration refers to the alignment of images from different imaging modalities. In the context of neurosurgery, this often involves aligning preoperative MRI data with intraoperative camera images. This presents unique challenges due to differences in:
 
 \begin{itemize}
-    \item \textbf{Information content}: MRI provides volumetric data with tissue contrast, while optical images capture surface appearance with details like blood vessels and lighting effects.
-    \item \textbf{Geometric representation}: MRI data is three-dimensional, while camera images are two-dimensional projections.
-    \item \textbf{Appearance}: The visual appearance of tissues differs significantly between MRI and optical images due to different physical principles of image formation.
+    \item \textbf{Information content}: MRI provides volumetric data with tissue contrast, while optical images capture surface appearance with details like blood vessels and lighting effects. \parencite{Choe2011Accuracy}
+    \item \textbf{Geometric representation}: MRI data is three-dimensional, while camera images are two-dimensional projections. \parencite{Unberath2021The}
+    \item \textbf{Appearance}: The visual appearance of tissues differs significantly between MRI and optical images due to different physical principles of image formation. \parencite{Xie2023Cross}
 \end{itemize}
 
 Previous work in cross-modal registration has employed techniques such as feature extraction, mutual information maximization, and deep learning-based approaches to bridge these differences.
@@ -65,7 +86,7 @@ Since the introduction of the original NeRF, numerous variants have been develop
     
     \item \textbf{HyperNeRF} \parencite{wang2023hypernerf}: Extends NeRFs to handle topological variations in dynamic scenes through a higher-dimensional representation.
     
-    \item \textbf{Nerfacto}: An implementation-agnostic framework that combines advances from various NeRF variants for improved performance.
+    \item \textbf{Nerfacto} \parencite{Tancik_2023}: An implementation-agnostic framework that combines advances from various NeRF variants for improved performance.
 \end{itemize}
 
 \subsection{iNeRF: Inverting Neural Radiance Fields for Pose Estimation}
@@ -137,21 +158,3 @@ Weighted and masked variants of the L2 loss assign different importance to diffe
 \end{equation}
 
 where $w(i)$ is a weight or mask value for pixel $i$. This approach can be useful for focusing the registration on regions of interest or for ignoring irrelevant areas.
-
-\section{Style Transfer Techniques}
-
-Style transfer refers to the process of transforming an image to have the visual style of another image while preserving its content. In the context of cross-modal registration, style transfer can be used to bridge the appearance gap between different imaging modalities.
-
-Various techniques for style transfer have been proposed, including:
-
-\begin{itemize}
-    \item \textbf{Gram-matrix-based methods}: These approaches capture style by computing correlations between feature activations in different layers of a neural network.
-    
-    \item \textbf{Hypernetwork-based style adaptation}: Hypernetworks generate parameters for another network based on style information, allowing for efficient style adaptation.
-    
-    \item \textbf{Feature space transformations}: These methods transform features in intermediate representations to match target style statistics.
-    
-    \item \textbf{Color space transformations}: Simpler approaches that match color distributions, such as histogram matching or transformations in alternative color spaces like Y'UV.
-\end{itemize}
-
-The approach by \textcite{fehrentz2024intraoperative} employs a hypernetwork-based technique for style adaptation, which we will build upon and extend in this thesis. 

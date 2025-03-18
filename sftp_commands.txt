@@ -1,0 +1,2 @@
+cd /n/home10/dpodolskyi/neural-registration/registration_results
+get -r 0_065_cat5_2_ssim /Users/david/Desktop/experiments_results/

@@ -1,21 +1,27 @@
-\RequirePackage[l2tabu,orthodox]{nag}
-
 % One-sided layout for bachelor thesis
 \documentclass[headsepline,footsepline,footinclude=false,oneside,fontsize=11pt,paper=a4,listof=totoc,bibliography=totoc,DIV=12]{scrbook}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\RequirePackage[l2tabu,orthodox]{nag}
 
 \input{settings}
 
 % Thesis information
 \newcommand*{\getUniversity}{Technische Universität München}
 \newcommand*{\getFaculty}{Department of Informatics}
-\newcommand*{\getTitle}{Enhancing Intraoperative Registration with Neural Radiance Fields: An Exploration of Loss Functions and Style Transfer Effects}
-\newcommand*{\getTitleGer}{Verbesserung der intraoperativen Registrierung mit Neural Radiance Fields: Eine Untersuchung von Verlustfunktionen und Stilübertragungseffekten}
-\newcommand*{\getAuthor}{David}
+\newcommand*{\getTitle}{Topic: Enhancing Intraoperative Registration with Neural Radiance Fields: An Exploration of Loss Functions Effects}
+\newcommand*{\getTitleGer}{Verbesserung der intraoperativen Registrierung mit Neural Radiance Fields: Eine Untersuchung der Auswirkungen von Verlustfunktionen}
+\newcommand*{\getAuthor}{Davyd Podolskyi}
 \newcommand*{\getDoctype}{Bachelor's Thesis in Informatics}
 \newcommand*{\getSupervisor}{Prof. Dr. Nassir Navab}
-\newcommand*{\getAdvisor}{Maximilian Fehrentz}
-\newcommand*{\getSubmissionDate}{September 2023}
+\newcommand*{\getAdvisorTUM}{Mohammad Farid Azampour, M.Sc.}
+\newcommand*{\getAdvisorHarvard}{Nazim Haouchine, PhD.}
+\newcommand*{\getSubmissionDate}{18.03.2025}
 \newcommand*{\getSubmissionLocation}{Munich}
+
+% Add bibliography file
+\addbibresource{bibliography.bib}
 
 \begin{document}
 
@@ -40,13 +46,14 @@
 
 \input{chapters/01_introduction}
 \input{chapters/02_background}
-\input{chapters/03_methodology}
-\input{chapters/04_loss_functions}
-\input{chapters/05_style_transfer}
-\input{chapters/06_experiments}
-\input{chapters/07_results}
-\input{chapters/08_discussion}
-\input{chapters/09_conclusion}
+\input{chapters/03_methodology} %prev 03-05 combined
+%\input{chapters/04_loss_functions}
+%\input{chapters/05_style_transfer}
+%\input{chapters/03-05_combined}
+% \input{chapters/04_experiments}
+\input{chapters/05_results}
+\input{chapters/06_discussion}
+\input{chapters/07_conclusion}
 
 \appendix{}
 
@@ -57,6 +64,6 @@
 \listoftables{}
 \microtypesetup{protrusion=true}
 \printglossaries
-\printbibliography{}
+\printbibliography
 
 \end{document}

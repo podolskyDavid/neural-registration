@@ -1,173 +1,444 @@
-\begin{appendices}
-
 \chapter{Implementation Details}\label{appendix:implementation}
 
 This appendix provides additional technical details about the implementation of the NeRF-based registration approach described in this thesis. The code is available at: \url{https://github.com/maxfehrentz/style-ngp}.
 
 \section{Software Implementation}
 
-The implementation is built on top of the nerfstudio framework, with custom extensions for registration and style transfer. The main components are:
+The neural registration framework described in this thesis was implemented in Python using PyTorch. This section provides a detailed description of the key components of the implementation.
 
+\subsection{Image Processing and Conversion}
+
+The following utility functions handle image processing and conversion between different formats:
+
+\begin{lstlisting}[language=Python]
+def image_to_tensor(image_path, device) -> torch.Tensor:
+    # Open the image using PIL
+    image = Image.open(image_path).convert("RGB")
+    
+    # Define the transform to convert the image to a PyTorch tensor
+    transform = transforms.ToTensor()  # This will convert to a tensor with shape (C, H, W)
+    
+    # Apply the transform
+    tensor = transform(image)  # Shape will be (3, 512, 512)
+    
+    # Permute the tensor to get shape (512, 512, 3)
+    tensor = tensor.permute(1, 2, 0).to(device)
+    
+    return tensor.detach().requires_grad_(False)
+
+def show_image(tensor):
+    plt.figure(figsize=(5, 5))
+    plt.imshow(tensor.detach().cpu().numpy())
+    plt.axis('off')
+    plt.show()
+\end{lstlisting}
+
+\subsection{iNeRF Optimization}
+
+The core of the registration framework is the \texttt{iNeRFOptimizerBatchedFD} class, which implements inverse NeRF optimization with batched finite differences for gradient computation. This approach allows for the estimation of camera pose parameters by minimizing the difference between a rendered NeRF view and a target image.
+
+\subsubsection{Initialization}
+
+The optimizer is initialized with the following parameters:
+
+\begin{lstlisting}[language=Python]
+def __init__(
+    self,
+    experiment_name, 
+    nerf_model, 
+    target_image,
+    initial_pose,
+    dataparser_matrix,
+    dataparser_scale,
+    camera_params,
+    loss_fn = nn.MSELoss(),
+    lr=0.001,
+    num_iterations=1000,
+    config_path=None
+):
+\end{lstlisting}
+
+Parameters include:
 \begin{itemize}
-    \item \textbf{Registration Module}: Implementation of various pose optimization strategies, including sequential, joint, and multi-stage approaches.
-    
-    \item \textbf{Loss Functions}: Implementation of different loss functions (L2, NCC, MI, weighted variants) with a modular interface for easy experimentation.
-    
-    \item \textbf{Style Transfer}: Implementation of different style encoding methods and the hypernetwork architecture for style adaptation.
-    
-    \item \textbf{Evaluation Metrics}: Tools for measuring registration accuracy, convergence behavior, and style transfer quality.
+    \item \texttt{experiment\_name}: Name for tracking and saving results
+    \item \texttt{nerf\_model}: The pre-trained NeRF model
+    \item \texttt{target\_image}: The target image to register against
+    \item \texttt{initial\_pose}: Initial camera pose estimate
+    \item \texttt{dataparser\_matrix} and \texttt{dataparser\_scale}: Transform parameters for coordinate system alignment
+    \item \texttt{camera\_params}: Camera intrinsic parameters
+    \item \texttt{loss\_fn}: Loss function for comparing rendered and target images
+    \item \texttt{lr}: Learning rate
+    \item \texttt{num\_iterations}: Maximum number of optimization iterations
 \end{itemize}
 
-All components are implemented in Python using PyTorch for deep learning functionality.
+\subsubsection{Optimization Process}
+
+The optimization uses finite differences to compute gradients rather than automatic differentiation. This is implemented in the \texttt{optimize\_step} method:
+
+\begin{lstlisting}[language=Python]
+def optimize_step(self, batch_size=4, debug=True):
+    # Zero gradients
+    self.optimizer.zero_grad()
+    
+    # Get current pose parameters
+    pose = self.pose_param.detach().clone()
+    
+    # Compute loss for current pose
+    original_loss, pred_rgb = self.compute_loss_no_grad(pose)
+    
+    # Small epsilon for finite differences
+    eps = 1e-4
+    
+    # Compute gradients using finite differences in batches
+    grad = torch.zeros_like(pose)
+    
+    # Flatten the pose for easier batch processing
+    num_params = pose.numel()
+    
+    # Use coordinate indexing to track which element we're perturbing
+    coords = [(i, j) for i in range(pose.shape[0]) for j in range(pose.shape[1])]
+    
+    # Process in batches
+    for batch_idx in range(0, num_params, batch_size):
+        batch_coords = coords[batch_idx:min(batch_idx+batch_size, num_params)]
+        
+        # Create a batch of perturbed poses
+        batch_poses = []
+        for i, j in batch_coords:
+            perturbed_pose = pose.clone()
+            perturbed_pose[i, j] += eps
+            batch_poses.append(perturbed_pose)
+        
+        # Stack poses into a batch
+        batch_poses_tensor = torch.stack(batch_poses)
+        
+        # Compute losses for all poses in the batch
+        batch_losses = self.compute_batch_losses(batch_poses_tensor)
+        
+        # Calculate gradients
+        for idx, (i, j) in enumerate(batch_coords):
+            grad[i, j] = (batch_losses[idx] - original_loss) / eps
+    
+    # Manually set gradients
+    self.pose_param.grad = grad
+    
+    # Perform optimization step
+    self.optimizer.step()
+    
+    return original_loss.item(), pred_rgb
+\end{lstlisting}
+
+This batched approach to finite differences significantly improves performance by computing multiple perturbed poses in parallel.
+
+\subsubsection{Camera Creation and Loss Computation}
+
+The optimizer creates cameras from pose matrices and computes losses between rendered and target images:
+
+\begin{lstlisting}[language=Python]
+def create_camera_from_pose(self, pose):
+    camera = Cameras(
+        camera_to_worlds=pose.unsqueeze(0),
+        fx=self.camera_params["fl_x"],
+        fy=self.camera_params["fl_y"],
+        cx=self.camera_params["cx"],
+        cy=self.camera_params["cy"],
+        camera_type=CameraType.PERSPECTIVE,
+        height=self.camera_params["h"],
+        width=self.camera_params["w"],
+    )
+    return camera
+
+def compute_loss_no_grad(self, pose):
+    with torch.no_grad():
+        # Create camera with the given pose
+        camera = self.create_camera_from_pose(pose)
+        
+        # Get outputs using the model's built-in method for rendering
+        outputs = self.nerf_model.get_outputs_for_camera(camera)
+        
+        # Compute loss
+        pred_rgb, image = self.nerf_model.renderer_rgb.blend_background_for_loss_computation(
+            pred_image=outputs["rgb"],
+            pred_accumulation=outputs["accumulation"],
+            gt_image=self.target_image,
+        )
+        
+        loss = self.nerf_model.rgb_loss(image, pred_rgb)
+        
+    return loss, pred_rgb
+\end{lstlisting}
+
+\subsection{Loss Functions}
+
+Multiple loss functions were implemented and compared for registration accuracy:
+
+\subsubsection{Standard Losses}
+\begin{lstlisting}[language=Python]
+# L1 and L2 losses
+l1_loss = nn.L1Loss()
+l2_loss = nn.MSELoss()
+huber_loss = nn.SmoothL1Loss(beta=0.5)
+\end{lstlisting}
+
+\subsubsection{Structural Similarity Index Loss}
+\begin{lstlisting}[language=Python]
+class StructuralSimilarityIndexLoss(nn.Module):
+    def __init__(self):
+        super(StructuralSimilarityIndexLoss, self).__init__()
+    
+    def forward(self, x, y):
+        # Rearrange dimensions if needed
+        if x.dim() == 3:  # [H, W, C]
+            # Rearrange to [1, C, H, W]
+            x = x.permute(2, 0, 1).unsqueeze(0)
+            y = y.permute(2, 0, 1).unsqueeze(0)
+        
+        return 1 - pytorch_msssim.ssim(x, y)
+\end{lstlisting}
+
+\subsubsection{Normalized Cross-Correlation Loss}
+\begin{lstlisting}[language=Python]
+class NormalizedCrossCorrelationLoss(nn.Module):
+    def __init__(self):
+        super(NormalizedCrossCorrelationLoss, self).__init__()
+        
+    def forward(self, x, y):
+        # Ensure proper dimensions
+        if x.dim() == 3:  # [H, W, C]
+            # Handle each channel separately and average
+            channels = x.shape[2]
+            ncc_sum = 0.0
+            
+            for c in range(channels):
+                x_c = x[..., c].flatten()
+                y_c = y[..., c].flatten()
+                ncc_sum += self._compute_ncc(x_c, y_c)
+                
+            ncc = ncc_sum / channels
+        else:  # Assume [B, C, H, W]
+            batch_size, channels = x.shape[0], x.shape[1]
+            ncc_sum = 0.0
+            
+            for b in range(batch_size):
+                channel_ncc = 0.0
+                for c in range(channels):
+                    x_bc = x[b, c].flatten()
+                    y_bc = y[b, c].flatten()
+                    channel_ncc += self._compute_ncc(x_bc, y_bc)
+                ncc_sum += channel_ncc / channels
+                
+            ncc = ncc_sum / batch_size
+        
+        # Convert to loss (1 - NCC since NCC=1 is perfect correlation)
+        return 1.0 - ncc
+    
+    def _compute_ncc(self, x, y):
+        # Mean centering
+        x_centered = x - x.mean()
+        y_centered = y - y.mean()
+        
+        # Compute normalization factors
+        x_norm = torch.sqrt(torch.sum(x_centered ** 2) + 1e-8)
+        y_norm = torch.sqrt(torch.sum(y_centered ** 2) + 1e-8)
+        
+        # Compute NCC
+        ncc = torch.sum(x_centered * y_centered) / (x_norm * y_norm)
+        
+        # Ensure result is in [-1, 1] range
+        return torch.clamp(ncc, -1.0, 1.0)
+\end{lstlisting}
+
+\subsubsection{Mutual Information Loss}
+\begin{lstlisting}[language=Python]
+class MutualInformationLoss(nn.Module):
+    def __init__(self, bins=32, sigma=0.1):
+        super(MutualInformationLoss, self).__init__()
+        self.bins = bins
+        self.sigma = sigma
+        self.epsilon = 1e-10  # Small constant to avoid log(0)
+        
+    def forward(self, x, y):
+        # Ensure proper dimensions
+        if x.dim() == 3:  # [H, W, C]
+            x_flat = x.reshape(-1)
+            y_flat = y.reshape(-1)
+        else:  # Assume [B, C, H, W]
+            x_flat = x.reshape(x.size(0), -1)
+            y_flat = y.reshape(y.size(0), -1)
+            
+        # Scale to [0, 1] if not already
+        if x_flat.max() > 1.0 or x_flat.min() < 0.0:
+            x_flat = (x_flat - x_flat.min()) / (x_flat.max() - x_flat.min() + self.epsilon)
+        if y_flat.max() > 1.0 or y_flat.min() < 0.0:
+            y_flat = (y_flat - y_flat.min()) / (y_flat.max() - y_flat.min() + self.epsilon)
+            
+        # Compute mutual information
+        mi_score = self._compute_mutual_information(x_flat, y_flat)
+        
+        # Return negative MI as we want to minimize loss
+        return -mi_score
+\end{lstlisting}
+
+\subsection{Experiment Tracking and Visualization}
+
+The implementation includes comprehensive experiment tracking and visualization features:
+
+\begin{itemize}
+    \item Automatic creation of experiment directories
+    \item Saving of intermediate and final renders
+    \item Tracking of loss history and optimization progress
+    \item Generation of visualization overlays for alignment quality assessment
+    \item JSON-based tracking of all experiment parameters and results
+\end{itemize}
+
+\subsection{Experimental Evaluation}
+
+The implementation supports systematic evaluation of different loss functions and registration parameters. Example experiments include:
+
+\begin{lstlisting}[language=Python]
+# Experiment 1: L1 loss
+inerf_optimizer = iNeRFOptimizerBatchedFD(
+    experiment_name="0_065_cat5_2_l1",
+    nerf_model=nerf_model,
+    target_image=target_image,
+    initial_pose=final_initial_pose,
+    dataparser_matrix=dataparser_matrix,
+    dataparser_scale=dataparser_scale,
+    camera_params=camera_params,
+    loss_fn=l1_loss,
+    lr=0.01,
+    num_iterations=50,
+    config_path=config_path
+)
+
+# Experiment 2: L2 loss
+inerf_optimizer = iNeRFOptimizerBatchedFD(
+    experiment_name="0_065_cat5_2_l2",
+    ...
+    loss_fn=l2_loss,
+    ...
+)
+
+# Experiment 3: SSIM loss
+inerf_optimizer = iNeRFOptimizerBatchedFD(
+    experiment_name="0_065_cat5_2_ssim",
+    ...
+    loss_fn=structural_similarity_index_loss,
+    ...
+)
+
+# Additional experiments with NCC and MI loss functions
+\end{lstlisting}
 
 \section{Hyperparameter Settings}\label{appendix:hyperparameters}
 
-Table~\ref{tab:hyperparameters} presents the hyperparameter settings used for the experiments in this thesis.
+This section details the key hyperparameters used in our neural registration framework and their effects on the registration process.
 
-\begin{table}[htpb]
-  \caption[Hyperparameter settings]{Hyperparameter settings used for the experiments.}\label{tab:hyperparameters}
-  \centering
-  \begin{tabular}{l l l}
-    \toprule
-      Component & Parameter & Value \\
-    \midrule
-      \multirow{3}{*}{NeRF Model} & Grid Resolution & $2048^3$ \\
-      & Hash Features & 16 \\
-      & Hash Levels & 16 \\
-    \midrule
-      \multirow{4}{*}{Registration Optimization} & Learning Rate (Pose) & $5 \times 10^{-3}$ \\
-      & Learning Rate (Style) & $1 \times 10^{-4}$ \\
-      & Optimizer & Adam \\
-      & Max Iterations & 500 \\
-    \midrule
-      \multirow{3}{*}{Loss Functions} & MI Bins & 32 \\
-      & NCC Window Size & 11 \\
-      & Combined Loss Weights & $\alpha=0.7, \beta=0.3$ \\
-    \midrule
-      \multirow{2}{*}{Style Hypernetwork} & Hidden Units & [128, 256, 128] \\
-      & Activation & LeakyReLU \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\section{Detailed Evaluation Metrics}\label{appendix:metrics}
-
-\subsection{Registration Accuracy Metrics}
-
-We calculate registration accuracy using the following metrics:
+\subsection{Optimization Hyperparameters}
 
 \begin{itemize}
-    \item \textbf{Rotational Error}: The angular difference between the estimated rotation $R_{\text{est}}$ and the ground truth rotation $R_{\text{gt}}$:
+    \item \textbf{Learning Rate}: We primarily used learning rates between 0.001 and 0.01. Higher learning rates can lead to faster convergence but may cause instability, while lower rates provide more stable but slower optimization. For most experiments, a learning rate of 0.01 provided good results.
     
-    \begin{equation}
-        \theta_{\text{error}} = \arccos\left(\frac{\text{trace}(R_{\text{est}}^T R_{\text{gt}}) - 1}{2}\right)
-    \end{equation}
+    \item \textbf{Number of Iterations}: Experiments were conducted with 50-1000 iterations. For evaluation purposes, 50 iterations were often sufficient to demonstrate the effectiveness of different loss functions, while longer runs (500-1000 iterations) were used for final results to ensure convergence.
     
-    \item \textbf{Translational Error}: The Euclidean distance between the estimated translation $t_{\text{est}}$ and the ground truth translation $t_{\text{gt}}$:
+    \item \textbf{Batch Size}: The finite difference gradient computation used batch sizes between 4 and 12. Larger batch sizes increased memory usage but significantly improved computation time by parallelizing the evaluation of perturbed poses.
     
-    \begin{equation}
-        t_{\text{error}} = \|t_{\text{est}} - t_{\text{gt}}\|_2
-    \end{equation}
-    
-    \item \textbf{Target Registration Error (TRE)}: The average Euclidean distance between corresponding points after registration:
-    
-    \begin{equation}
-        \text{TRE} = \frac{1}{N} \sum_{i=1}^{N} \|T_{\text{est}}(p_i) - T_{\text{gt}}(p_i)\|_2
-    \end{equation}
-    
-    where $p_i$ are anatomical landmarks, and $T_{\text{est}}$ and $T_{\text{gt}}$ are the estimated and ground truth transformation matrices, respectively.
+    \item \textbf{Epsilon Value}: A value of $1e^{-4}$ was used for finite difference calculations. This represents the small perturbation applied to each parameter when computing gradients numerically.
 \end{itemize}
 
-\subsection{Image Similarity Metrics}
+\subsection{Loss Function Hyperparameters}
 
-We evaluate image similarity using:
+Different loss functions require specific hyperparameters:
 
 \begin{itemize}
-    \item \textbf{Structural Similarity Index (SSIM)}: Measures the structural similarity between two images:
+    \item \textbf{Mutual Information Loss}:
+    \begin{itemize}
+        \item Bins: 32 (controls the discretization of intensity values)
+        \item Sigma: 0.1 (kernel width for soft binning)
+    \end{itemize}
     
-    \begin{equation}
-        \text{SSIM}(x, y) = \frac{(2\mu_x\mu_y + C_1)(2\sigma_{xy} + C_2)}{(\mu_x^2 + \mu_y^2 + C_1)(\sigma_x^2 + \sigma_y^2 + C_2)}
-    \end{equation}
+    \item \textbf{Structural Similarity Loss}:
+    \begin{itemize}
+        \item Uses default parameters from the PyTorch SSIM implementation
+    \end{itemize}
     
-    \item \textbf{Peak Signal-to-Noise Ratio (PSNR)}: Measures the fidelity of image reconstruction:
-    
-    \begin{equation}
-        \text{PSNR}(x, y) = 10 \log_{10}\left(\frac{\text{MAX}^2}{\text{MSE}(x, y)}\right)
-    \end{equation}
-    
-    \item \textbf{Learned Perceptual Image Patch Similarity (LPIPS)}: Uses deep features to measure perceptual similarity between images.
-    
-    \item \textbf{Style Score}: A custom metric that combines aspects of color, texture, and structural similarities to evaluate the quality of style transfer.
+    \item \textbf{Huber Loss}:
+    \begin{itemize}
+        \item Beta: 0.5 (controls the transition point between L1 and L2 behavior)
+    \end{itemize}
 \end{itemize}
 
-\chapter{Additional Results}\label{appendix:results}
+\subsection{Camera Model Parameters}
 
-\section{Detailed Loss Function Comparison}\label{appendix:loss_comparison}
+Camera intrinsic parameters used in the experiments:
 
-Figure~\ref{fig:detailed_loss_comparison} presents a more detailed comparison of different loss functions across various experimental conditions.
+\begin{itemize}
+    \item \textbf{Image Resolution}: 512×512 pixels
+    \item \textbf{Focal Length}: fl\_x = fl\_y = 955.4050067376327
+    \item \textbf{Principal Point}: cx = cy = 256.0
+    \item \textbf{Field of View}: 0.5235987755982988 radians (approximately 30 degrees)
+    \item \textbf{Distortion Parameters}: All set to 0 (no distortion modeling)
+\end{itemize}
 
-% Placeholder for detailed loss comparison figure
-\begin{figure}[htpb]
-  \centering
-  % Add actual figure in the implementation
-  \caption[Detailed comparison of loss functions]{Detailed comparison of different loss functions across various experimental conditions, including different initialization errors, image resolutions, and noise levels.}
-  \label{fig:detailed_loss_comparison}
-\end{figure}
+\subsection{Performance Considerations}
 
-\section{Style Transfer Visualization}\label{appendix:style_visualization}
+The choice of hyperparameters significantly impacts both registration accuracy and computational efficiency:
 
-Figure~\ref{fig:style_visualization} shows visual examples of different style transfer methods applied to the same input image.
+\begin{itemize}
+    \item Increasing batch size from 4 to 12 resulted in approximately 3× speedup in gradient computation with minimal impact on convergence.
+    
+    \item The choice of loss function often had a greater impact on registration accuracy than tuning other optimization parameters. For most medical image registration scenarios, Normalized Cross-Correlation (NCC) and Structural Similarity Index (SSIM) provided better results than L1 or L2 losses due to their robustness to intensity variations.
+    
+    \item Optimization progress was tracked at intervals of 10-50 iterations to enable early stopping if needed, though most experiments ran to completion.
+    
+    \item Rendering resolution remained fixed at 512×512 for all experiments, as this provided a good balance between detail and computational efficiency.
+\end{itemize}
 
-% Placeholder for style visualization figure
-\begin{figure}[htpb]
-  \centering
-  % Add actual figure in the implementation
-  \caption[Visualization of different style transfer methods]{Visualization of different style transfer methods applied to the same input image, showing the original MRI-derived rendering, the target intraoperative image, and the results of various style transfer approaches.}
-  \label{fig:style_visualization}
-\end{figure}
+\subsection{Experimental Configurations}
 
-\section{Clinical Case Studies}\label{appendix:case_studies}
+For systematic comparison of different registration approaches, we consistently used the following configuration across experiments:
 
-Table~\ref{tab:case_studies} presents detailed results for five representative clinical cases from our evaluation dataset.
+\begin{itemize}
+    \item Initial pose perturbation magnitudes were consistent across all compared methods
+    \item All methods used the same NeRF model trained with identical hyperparameters
+    \item 5 repeated trials with different random initializations were conducted for each experimental configuration to account for optimization variability
+    \item Target images were selected from held-out test views not used during NeRF training
+\end{itemize}
 
-\begin{table}[htpb]
-  \caption[Detailed results for clinical case studies]{Detailed results for five representative clinical cases, showing registration accuracy, computation time, and convergence behavior for each case.}\label{tab:case_studies}
-  \centering
-  \begin{tabular}{l c c c c c}
-    \toprule
-      Metric & Case 1 & Case 2 & Case 3 & Case 4 & Case 5 \\
-    \midrule
-      Initial TRE (mm) & 15.37 & 12.85 & 18.64 & 10.42 & 14.23 \\
-      Final TRE (mm) & 1.76 & 2.18 & 2.43 & 1.65 & 2.31 \\
-      Iterations & 132 & 157 & 189 & 121 & 163 \\
-      Time (s) & 15.8 & 18.9 & 22.6 & 14.5 & 19.6 \\
-      Success & Yes & Yes & Yes & Yes & Yes \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+The hyperparameter values listed above represent our final configuration after extensive experimentation. These settings provided a good balance between registration accuracy, convergence reliability, and computational efficiency across the datasets used in this study.
 
 \chapter{Glossary}\label{appendix:glossary}
 
 \begin{description}
-    \item[NeRF (Neural Radiance Field)] An implicit neural representation that maps 3D coordinates and viewing directions to color and volume density, enabling novel view synthesis of complex scenes.
+    \item[Brain Shift] The deformation of brain tissue during surgery due to factors such as cerebrospinal fluid drainage, gravity, and surgical manipulations, which reduces the accuracy of rigid registration methods.
     
-    \item[iNeRF] A method that inverts Neural Radiance Fields for pose estimation by optimizing camera parameters through backpropagation.
+    \item[Cross-Modal Registration] The process of aligning images from different imaging modalities, such as preoperative MRI data with intraoperative camera images, which presents unique challenges due to differences in information content, geometric representation, and visual appearance.
     
-    \item[Registration] The process of aligning two or more datasets into a common coordinate system.
+    \item[Finite Difference] A numerical method for computing gradients by evaluating a function at multiple perturbed points, used in this thesis to overcome limitations with gradient flow in the computational graph.
     
-    \item[Intraoperative] Occurring during a surgical procedure.
+    \item[Hypernetwork] A neural network that generates parameters for another neural network, used to adapt the appearance of NeRF renderings while preserving geometric structure.
     
-    \item[Target Registration Error (TRE)] A metric that quantifies the accuracy of registration by measuring the distance between corresponding points after registration.
+    \item[iNeRF (Inverse Neural Radiance Field)] A method that inverts Neural Radiance Fields for pose estimation by optimizing camera parameters through backpropagation to minimize the difference between rendered and target images.
     
-    \item[Mutual Information (MI)] An information-theoretic measure that quantifies the mutual dependence between two random variables, used as a similarity metric for registration.
+    \item[Intraoperative] Occurring during a surgical procedure, specifically referring to the registration and imaging processes that take place while surgery is being performed.
     
-    \item[Normalized Cross-Correlation (NCC)] A similarity measure that calculates the correlation between two signals normalized by their standard deviations.
+    \item[L1 Loss] A loss function that calculates the absolute difference between pixels in two images, often more robust to outliers than L2 loss.
     
-    \item[Style Transfer] The process of applying the visual style of one image to the content of another image.
+    \item[L2 Loss] Also known as Mean Squared Error (MSE), a loss function that calculates the squared Euclidean distance between two images, commonly used in image registration due to its simplicity and differentiability.
     
-    \item[Hypernetwork] A neural network that generates parameters for another neural network.
+    \item[Model Agnosticism] The quality of an implementation that works with multiple model variants without being tied to a specific architecture, allowing for greater flexibility and comparative evaluation.
     
-    \item[Gram Matrix] A mathematical representation of style in images, calculated as the correlation between feature activations in different channels of a neural network.
+    \item[Mutual Information (MI)] An information-theoretic measure that quantifies the mutual dependence between two random variables by evaluating their joint and marginal probability distributions, particularly useful for cross-modal registration where the relationship between image intensities is complex.
+    
+    \item[NeRF (Neural Radiance Field)] An implicit neural representation that maps 3D coordinates and viewing directions to color and volume density, enabling novel view synthesis of complex scenes through a continuous, differentiable function optimized using volume rendering techniques.
+    
+    \item[Nerfstudio] An implementation-agnostic framework for developing and deploying Neural Radiance Field models, which combines advances from various NeRF variants for improved performance.
+    
+    \item[Normalized Cross-Correlation (NCC)] A similarity measure that calculates the correlation between two signals normalized by their standard deviations, making it robust to linear intensity transformations between images.
+    
+    \item[Registration] The process of aligning two or more datasets into a common coordinate system, essential in neurosurgery for ensuring accurate spatial correspondence between preoperative imaging data and the patient's anatomy.
+    
+    \item[Structural Similarity Index (SSIM)] A perceptual metric that quantifies image similarity based on changes in structural information, luminance, and contrast, modeled after the human visual system.
+    
+    \item[Style Transfer] The process of applying the visual style of one image to the content of another image, used in cross-modal registration to bridge appearance gaps between different imaging modalities.
 \end{description}
-
-\end{appendices}

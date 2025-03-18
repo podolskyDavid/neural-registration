@@ -1,0 +1,58 @@
+% !TeX root = ../main.tex
+
+\chapter{Discussion}\label{chap:discussion}
+
+In this chapter, we interpret the results of our experiments, discuss the caveats associated with our experimental setup, highlight the limitations of our current approach, and suggest directions for future research.
+
+\section{Interpretation of Results}
+
+\subsection{Loss Function Performance}
+Our experiments revealed distinct performance characteristics associated with each evaluated loss function. L1 loss consistently demonstrated faster convergence compared to other loss functions, notably achieving quicker reductions in error. Additionally, both L1 and L2 losses exhibited smoother and more direct convergence trajectories, which may indicate their suitability for tasks requiring rapid and stable alignment, such as intraoperative scenarios.
+
+In contrast, Structural Similarity Index (SSIM), Normalized Cross-Correlation (NCC), and Mutual Information (MI) demonstrated more explorative behavior during initial iterations, characterized by fluctuating, "jiggly" optimization paths. This behavior suggests these losses may explore the parameter space more thoroughly at the cost of slower initial convergence. Mutual Information and NCC, in particular, showed more oscillations, reflecting their sensitivity to variations in pixel intensities but also their potential robustness to certain types of noise or distortions.
+
+\section{Caveats of the Experimental Setup}\label{sec:caveats}
+
+The experimental design involved several key simplifications that limit direct translation to clinical practice:
+
+\begin{itemize}
+    \item \textbf{Perfect NeRF assumption:} Both target and iterative images were synthesized from the same pre-trained NeRF, eliminating realistic factors such as lighting variations, surgical environment noise, and intraoperative tissue deformation. Therefore, while the current setup provides a controlled environment to evaluate the registration method, it overestimates real-world accuracy.
+    
+    \item \textbf{Finite Differences for Gradient Calculation:} Due to complexity in directly implementing backpropagation through InstantNGP-based NeRF models, finite differences were utilized as a workaround. While effective in proof-of-concept scenarios, this method is computationally expensive and less precise than automatic differentiation.
+    
+    \item \textbf{Constant Camera Distance and Fixed Initialization:} The experimental scenario assumed a fixed camera distance and a manually chosen initial position that always provided a partial view of the target region. This is unrealistic in surgical settings, where initial camera positioning can vary significantly, and occlusions may frequently occur.
+\end{itemize}
+
+\section{Limitations}\label{sec:limitations}
+
+Several limitations affect the current approach:
+
+\begin{itemize}
+    \item \textbf{Computational Efficiency:} Finite differences-based gradient estimation significantly increases computational load, limiting real-time clinical applicability.
+
+    \item \textbf{Assumption of Model Accuracy:} The assumption that NeRF perfectly captures brain geometry and appearance neglects inevitable inaccuracies in the preoperative model and intraoperative tissue deformation and appearance changes.
+
+    \item \textbf{Initialization Sensitivity:} The current method heavily depends on the initial camera pose selection, affecting convergence speed and reliability.
+
+    \item \textbf{Generalization to Clinical Data:} Experiments conducted entirely with synthetic images derived from a single NeRF model may not generalize well to real clinical images due to differences in lighting, texture, and anatomical variability.
+\end{itemize}
+
+\section{Future Work}\label{sec:futurework}
+
+Future directions for improving and extending the proposed neural registration approach include:
+
+\begin{itemize}
+    \item \textbf{Automatic Differentiation Integration:} Replacing finite differences with automatic differentiation methods to significantly improve computational efficiency and stability.
+
+    \item \textbf{Gaussian Splats:} Investigating Gaussian Splats as an alternative representation, offering faster rendering, fewer visual artifacts, and potentially superior registration performance.
+
+    \item \textbf{Enhanced NeRF Models:} Incorporating hypernetwork-based methods to better match the NeRF model's density and appearance to actual intraoperative conditions, addressing the oversimplification in the current setup.
+
+    \item \textbf{Robust Initialization Strategies:} Developing methods for automatic or semi-automatic selection of robust initial camera poses, thus reducing sensitivity to starting conditions and improving reliability.
+
+    \item \textbf{Hybrid Loss Functions:} Exploring combined or adaptive loss functions to leverage the strengths of multiple similarity metrics, potentially achieving superior registration accuracy and robustness.
+
+    \item \textbf{Clinical Validation:} Extending evaluation to realistic clinical or phantom datasets to assess practical applicability, robustness against real-world variability, and identification of clinical relevance.
+\end{itemize}
+
+Addressing these areas in future research will pave the way for practical clinical applications of NeRF-based intraoperative registration, enhancing surgical precision and patient outcomes.

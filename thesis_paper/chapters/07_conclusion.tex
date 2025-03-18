@@ -1,0 +1,18 @@
+% !TeX root = ../main.tex
+
+\chapter{Conclusion}\label{chapter:conclusion}
+
+This study introduced an enhanced intraoperative registration method using Neural Radiance Fields (NeRFs), highlighting the critical role of differentiable implicit representations in accurately aligning preoperative and intraoperative brain surface images. By developing a flexible, NeRF-model agnostic implementation inspired by iNeRF, the algorithm facilitates robust and customizable intraoperative registration workflows.
+
+We conducted an extensive exploration of various loss functions (L1, L2, Structural Similarity Index, Normalized Cross-Correlation, and Mutual Information) and analyzed their impacts on the convergence behavior and registration accuracy. The results demonstrated that L1 and L2 losses provide rapid and stable convergence, making them suitable for clinical scenarios requiring efficiency and reliability. On the other hand, Mutual Information and Normalized Cross-Correlation, despite their less direct convergence trajectories, offer greater flexibility in scenarios where robustness to imaging variations might be advantageous.
+
+Despite these promising findings, the study acknowledges critical simplifications and assumptions. The current simulation assumes an idealized scenario where the NeRF perfectly represents the intraoperative brain surface, eliminating realistic noise, lighting variations, and inaccuracies. Additionally, the computational performance remains limited by the finite difference gradient estimation method implemented as a workaround for gradient propagation challenges in InstantNGP models.
+
+Future work should focus on overcoming these limitations by:
+\begin{itemize}
+\item Developing more realistic NeRF models that capture intraoperative variability in brain appearance through enhanced coloring techniques, potentially leveraging hypernetworks for more robust representations.
+\item Transitioning from finite difference-based gradient calculations to efficient direct backpropagation methods to improve optimization speed and efficiency.
+\end{itemize}
+
+Further exploration into faster and visually superior methods, such as Gaussian Splatting, represents a promising direction for significantly improving registration performance and computational efficiency, ultimately advancing the accuracy and reliability of intraoperative brain registration in clinical settings.
+
