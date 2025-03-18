@@ -1,0 +1,25 @@
+\chapter{\abstractname}
+
+This study advances intraoperative brain registration using Neural Radiance Fields (NeRFs) as learned functional representations of brain surfaces. Unlike traditional mesh-based approaches, NeRFs provide a differentiable, implicit function of the brain's geometry and appearance. We leverage this property to optimize camera positions through backpropagation, enabling precise alignment of preoperative and intraoperative brain images. Our research explores various loss functions (Mutual Information, Normalized Cross-Correlation, weighted/masked L2) and analyzes the impact of hypernetwork-generated styles on registration accuracy. By enhancing NeRF-based brain registration, this work aims to improve the precision of image-guided neurosurgery.
+
+
+
+\makeatletter
+\ifthenelse{\pdf@strcmp{\languagename}{english}=0}
+{\renewcommand{\abstractname}{Kurzfassung}}
+{\renewcommand{\abstractname}{Abstract}}
+\makeatother
+
+\chapter{\abstractname}
+
+\begin{otherlanguage}{ngerman}
+Diese Studie verbessert die intraoperative Hirnregistrierung durch den Einsatz von Neural Radiance Fields (NeRFs) als erlernte funktionale Darstellungen von Hirnoberflächen. Im Gegensatz zu traditionellen netzbasierten Ansätzen bieten NeRFs eine differenzierbare, implizite Funktion der Geometrie und des Erscheinungsbilds des Gehirns. Wir nutzen diese Eigenschaft, um Kamerapositionen durch Backpropagation zu optimieren und ermöglichen so eine präzise Ausrichtung von präoperativen und intraoperativen Hirnbildern. Unsere Forschung untersucht verschiedene Verlustfunktionen (Mutual Information, Normalized Cross-Correlation, gewichteter/maskierter L2-Verlust) und analysiert den Einfluss von durch Hypernetzwerke generierte Stile auf die Registrierungsgenauigkeit. Durch die Verbesserung der NeRF-basierten Hirnregistrierung zielt diese Arbeit darauf ab, die Präzision der bildgeführten Neurochirurgie zu verbessern.
+\end{otherlanguage}
+
+
+% Undo the name switch
+\makeatletter
+\ifthenelse{\pdf@strcmp{\languagename}{english}=0}
+{\renewcommand{\abstractname}{Abstract}}
+{\renewcommand{\abstractname}{Kurzfassung}}
+\makeatother

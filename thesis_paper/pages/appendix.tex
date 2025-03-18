@@ -1,0 +1,173 @@
+\begin{appendices}
+
+\chapter{Implementation Details}\label{appendix:implementation}
+
+This appendix provides additional technical details about the implementation of the NeRF-based registration approach described in this thesis. The code is available at: \url{https://github.com/maxfehrentz/style-ngp}.
+
+\section{Software Implementation}
+
+The implementation is built on top of the nerfstudio framework, with custom extensions for registration and style transfer. The main components are:
+
+\begin{itemize}
+    \item \textbf{Registration Module}: Implementation of various pose optimization strategies, including sequential, joint, and multi-stage approaches.
+    
+    \item \textbf{Loss Functions}: Implementation of different loss functions (L2, NCC, MI, weighted variants) with a modular interface for easy experimentation.
+    
+    \item \textbf{Style Transfer}: Implementation of different style encoding methods and the hypernetwork architecture for style adaptation.
+    
+    \item \textbf{Evaluation Metrics}: Tools for measuring registration accuracy, convergence behavior, and style transfer quality.
+\end{itemize}
+
+All components are implemented in Python using PyTorch for deep learning functionality.
+
+\section{Hyperparameter Settings}\label{appendix:hyperparameters}
+
+Table~\ref{tab:hyperparameters} presents the hyperparameter settings used for the experiments in this thesis.
+
+\begin{table}[htpb]
+  \caption[Hyperparameter settings]{Hyperparameter settings used for the experiments.}\label{tab:hyperparameters}
+  \centering
+  \begin{tabular}{l l l}
+    \toprule
+      Component & Parameter & Value \\
+    \midrule
+      \multirow{3}{*}{NeRF Model} & Grid Resolution & $2048^3$ \\
+      & Hash Features & 16 \\
+      & Hash Levels & 16 \\
+    \midrule
+      \multirow{4}{*}{Registration Optimization} & Learning Rate (Pose) & $5 \times 10^{-3}$ \\
+      & Learning Rate (Style) & $1 \times 10^{-4}$ \\
+      & Optimizer & Adam \\
+      & Max Iterations & 500 \\
+    \midrule
+      \multirow{3}{*}{Loss Functions} & MI Bins & 32 \\
+      & NCC Window Size & 11 \\
+      & Combined Loss Weights & $\alpha=0.7, \beta=0.3$ \\
+    \midrule
+      \multirow{2}{*}{Style Hypernetwork} & Hidden Units & [128, 256, 128] \\
+      & Activation & LeakyReLU \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Detailed Evaluation Metrics}\label{appendix:metrics}
+
+\subsection{Registration Accuracy Metrics}
+
+We calculate registration accuracy using the following metrics:
+
+\begin{itemize}
+    \item \textbf{Rotational Error}: The angular difference between the estimated rotation $R_{\text{est}}$ and the ground truth rotation $R_{\text{gt}}$:
+    
+    \begin{equation}
+        \theta_{\text{error}} = \arccos\left(\frac{\text{trace}(R_{\text{est}}^T R_{\text{gt}}) - 1}{2}\right)
+    \end{equation}
+    
+    \item \textbf{Translational Error}: The Euclidean distance between the estimated translation $t_{\text{est}}$ and the ground truth translation $t_{\text{gt}}$:
+    
+    \begin{equation}
+        t_{\text{error}} = \|t_{\text{est}} - t_{\text{gt}}\|_2
+    \end{equation}
+    
+    \item \textbf{Target Registration Error (TRE)}: The average Euclidean distance between corresponding points after registration:
+    
+    \begin{equation}
+        \text{TRE} = \frac{1}{N} \sum_{i=1}^{N} \|T_{\text{est}}(p_i) - T_{\text{gt}}(p_i)\|_2
+    \end{equation}
+    
+    where $p_i$ are anatomical landmarks, and $T_{\text{est}}$ and $T_{\text{gt}}$ are the estimated and ground truth transformation matrices, respectively.
+\end{itemize}
+
+\subsection{Image Similarity Metrics}
+
+We evaluate image similarity using:
+
+\begin{itemize}
+    \item \textbf{Structural Similarity Index (SSIM)}: Measures the structural similarity between two images:
+    
+    \begin{equation}
+        \text{SSIM}(x, y) = \frac{(2\mu_x\mu_y + C_1)(2\sigma_{xy} + C_2)}{(\mu_x^2 + \mu_y^2 + C_1)(\sigma_x^2 + \sigma_y^2 + C_2)}
+    \end{equation}
+    
+    \item \textbf{Peak Signal-to-Noise Ratio (PSNR)}: Measures the fidelity of image reconstruction:
+    
+    \begin{equation}
+        \text{PSNR}(x, y) = 10 \log_{10}\left(\frac{\text{MAX}^2}{\text{MSE}(x, y)}\right)
+    \end{equation}
+    
+    \item \textbf{Learned Perceptual Image Patch Similarity (LPIPS)}: Uses deep features to measure perceptual similarity between images.
+    
+    \item \textbf{Style Score}: A custom metric that combines aspects of color, texture, and structural similarities to evaluate the quality of style transfer.
+\end{itemize}
+
+\chapter{Additional Results}\label{appendix:results}
+
+\section{Detailed Loss Function Comparison}\label{appendix:loss_comparison}
+
+Figure~\ref{fig:detailed_loss_comparison} presents a more detailed comparison of different loss functions across various experimental conditions.
+
+% Placeholder for detailed loss comparison figure
+\begin{figure}[htpb]
+  \centering
+  % Add actual figure in the implementation
+  \caption[Detailed comparison of loss functions]{Detailed comparison of different loss functions across various experimental conditions, including different initialization errors, image resolutions, and noise levels.}
+  \label{fig:detailed_loss_comparison}
+\end{figure}
+
+\section{Style Transfer Visualization}\label{appendix:style_visualization}
+
+Figure~\ref{fig:style_visualization} shows visual examples of different style transfer methods applied to the same input image.
+
+% Placeholder for style visualization figure
+\begin{figure}[htpb]
+  \centering
+  % Add actual figure in the implementation
+  \caption[Visualization of different style transfer methods]{Visualization of different style transfer methods applied to the same input image, showing the original MRI-derived rendering, the target intraoperative image, and the results of various style transfer approaches.}
+  \label{fig:style_visualization}
+\end{figure}
+
+\section{Clinical Case Studies}\label{appendix:case_studies}
+
+Table~\ref{tab:case_studies} presents detailed results for five representative clinical cases from our evaluation dataset.
+
+\begin{table}[htpb]
+  \caption[Detailed results for clinical case studies]{Detailed results for five representative clinical cases, showing registration accuracy, computation time, and convergence behavior for each case.}\label{tab:case_studies}
+  \centering
+  \begin{tabular}{l c c c c c}
+    \toprule
+      Metric & Case 1 & Case 2 & Case 3 & Case 4 & Case 5 \\
+    \midrule
+      Initial TRE (mm) & 15.37 & 12.85 & 18.64 & 10.42 & 14.23 \\
+      Final TRE (mm) & 1.76 & 2.18 & 2.43 & 1.65 & 2.31 \\
+      Iterations & 132 & 157 & 189 & 121 & 163 \\
+      Time (s) & 15.8 & 18.9 & 22.6 & 14.5 & 19.6 \\
+      Success & Yes & Yes & Yes & Yes & Yes \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\chapter{Glossary}\label{appendix:glossary}
+
+\begin{description}
+    \item[NeRF (Neural Radiance Field)] An implicit neural representation that maps 3D coordinates and viewing directions to color and volume density, enabling novel view synthesis of complex scenes.
+    
+    \item[iNeRF] A method that inverts Neural Radiance Fields for pose estimation by optimizing camera parameters through backpropagation.
+    
+    \item[Registration] The process of aligning two or more datasets into a common coordinate system.
+    
+    \item[Intraoperative] Occurring during a surgical procedure.
+    
+    \item[Target Registration Error (TRE)] A metric that quantifies the accuracy of registration by measuring the distance between corresponding points after registration.
+    
+    \item[Mutual Information (MI)] An information-theoretic measure that quantifies the mutual dependence between two random variables, used as a similarity metric for registration.
+    
+    \item[Normalized Cross-Correlation (NCC)] A similarity measure that calculates the correlation between two signals normalized by their standard deviations.
+    
+    \item[Style Transfer] The process of applying the visual style of one image to the content of another image.
+    
+    \item[Hypernetwork] A neural network that generates parameters for another neural network.
+    
+    \item[Gram Matrix] A mathematical representation of style in images, calculated as the correlation between feature activations in different channels of a neural network.
+\end{description}
+
+\end{appendices}

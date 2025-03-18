@@ -1,0 +1,259 @@
+% !TeX root = ../main.tex
+
+\chapter{Loss Functions for NeRF-Based Registration}\label{chapter:loss_functions}
+
+This chapter provides a detailed analysis of various loss functions and their application to NeRF-based intraoperative registration. We investigate how different similarity measures affect registration accuracy, convergence speed, and robustness to cross-modal appearance variations. The loss function is a critical component of the registration framework, as it defines the optimization objective that guides the camera pose estimation process.
+
+\section{Role of Loss Functions in Registration}
+
+In the context of intraoperative registration using Neural Radiance Fields, the loss function serves two primary purposes:
+
+\begin{enumerate}
+    \item \textbf{Similarity Measurement}: It quantifies the similarity between the target intraoperative image and the rendered image from the NeRF model. This measure guides the optimization process toward better alignment.
+    
+    \item \textbf{Gradient Provision}: It provides gradients with respect to camera pose parameters, enabling backpropagation-based optimization of the camera pose.
+\end{enumerate}
+
+The effectiveness of a loss function depends on its ability to handle cross-modal differences between preoperative MRI-derived renderings and intraoperative camera images. Different loss functions have varying sensitivities to factors such as:
+
+\begin{itemize}
+    \item Intensity scaling and bias
+    \item Local contrast variations
+    \item Texture and high-frequency details
+    \item Noise and outliers
+    \item Incomplete overlap between images
+\end{itemize}
+
+\section{L2 Loss: Baseline Approach}
+
+The L2 loss, or mean squared error (MSE), is commonly used in registration tasks and serves as our baseline approach. For two images $I_1$ and $I_2$, the L2 loss is defined as:
+
+\begin{equation}
+    \mathcal{L}_{\text{L2}}(I_1, I_2) = \frac{1}{N} \sum_{i=1}^{N} (I_1(i) - I_2(i))^2
+\end{equation}
+
+where $N$ is the number of pixels in the images.
+
+\subsection{Implementation Details}
+
+Our implementation of the L2 loss includes the following components:
+
+\begin{itemize}
+    \item \textbf{Normalization}: To improve robustness to global intensity variations, we normalize the images to have zero mean and unit standard deviation before computing the loss.
+    
+    \item \textbf{Channel Weighting}: We allow for different weights to be assigned to different color channels, potentially prioritizing channels with more relevant information.
+    
+    \item \textbf{Differentiability}: The L2 loss is fully differentiable with respect to the input images, enabling end-to-end gradient flow from the loss to the camera pose parameters.
+\end{itemize}
+
+\subsection{Advantages and Limitations}
+
+The L2 loss offers several advantages:
+\begin{itemize}
+    \item Simplicity and computational efficiency
+    \item Well-defined gradients for optimization
+    \item Direct interpretation as the Euclidean distance in pixel space
+\end{itemize}
+
+However, it also has significant limitations for cross-modal registration:
+\begin{itemize}
+    \item High sensitivity to intensity variations and outliers
+    \item Assumption of direct correspondence between pixel intensities across modalities
+    \item Limited capture range, potentially leading to local minima
+\end{itemize}
+
+\section{Normalized Cross-Correlation (NCC)}
+
+Normalized Cross-Correlation measures the linear relationship between two images while being invariant to linear intensity transformations. The NCC loss is defined as:
+
+\begin{equation}
+    \mathcal{L}_{\text{NCC}}(I_1, I_2) = -\frac{\sum_{i=1}^{N} (I_1(i) - \bar{I}_1)(I_2(i) - \bar{I}_2)}{\sqrt{\sum_{i=1}^{N} (I_1(i) - \bar{I}_1)^2 \sum_{i=1}^{N} (I_2(i) - \bar{I}_2)^2}}
+\end{equation}
+
+where $\bar{I}_1$ and $\bar{I}_2$ are the mean intensities of the respective images. The negative sign is used because we're minimizing the loss, while NCC itself is a similarity measure that should be maximized.
+
+\subsection{Implementation Details}
+
+Our implementation of NCC includes several enhancements:
+
+\begin{itemize}
+    \item \textbf{Local NCC}: We implement both global NCC (computed over the entire image) and local NCC (computed over small patches), which can better handle local intensity variations.
+    
+    \item \textbf{Multi-scale NCC}: We compute NCC at multiple scales to capture both fine details and broader structures.
+    
+    \item \textbf{Regularization}: A small constant $\epsilon$ is added to the denominator to ensure numerical stability:
+    \begin{equation}
+        \mathcal{L}_{\text{NCC}}(I_1, I_2) = -\frac{\sum_{i=1}^{N} (I_1(i) - \bar{I}_1)(I_2(i) - \bar{I}_2)}{\sqrt{(\sum_{i=1}^{N} (I_1(i) - \bar{I}_1)^2 + \epsilon)(\sum_{i=1}^{N} (I_2(i) - \bar{I}_2)^2 + \epsilon)}}
+    \end{equation}
+\end{itemize}
+
+\subsection{Advantages and Limitations}
+
+NCC offers several advantages over L2 loss for cross-modal registration:
+\begin{itemize}
+    \item Invariance to linear intensity transformations (scaling and bias)
+    \item Better robustness to global illumination changes
+    \item Often more effective for cross-modal registration tasks \parencite{nccreg}
+\end{itemize}
+
+However, NCC also has limitations:
+\begin{itemize}
+    \item Only captures linear relationships between images
+    \item May be less effective when the relationship between modalities is non-linear
+    \item Computationally more expensive than L2 loss
+\end{itemize}
+
+\section{Mutual Information (MI)}
+
+Mutual Information is a statistical measure from information theory that quantifies the mutual dependence between two random variables. In the context of image registration, MI measures how much information one image provides about another, making it particularly suitable for cross-modal registration where the relationship between intensities is complex and non-linear.
+
+The MI loss is defined as:
+
+\begin{equation}
+    \mathcal{L}_{\text{MI}}(I_1, I_2) = -\sum_{i,j} p_{I_1,I_2}(i,j) \log\left(\frac{p_{I_1,I_2}(i,j)}{p_{I_1}(i)p_{I_2}(j)}\right)
+\end{equation}
+
+where $p_{I_1,I_2}$ is the joint probability distribution of intensities in images $I_1$ and $I_2$, and $p_{I_1}$ and $p_{I_2}$ are their marginal distributions. As with NCC, the negative sign is used to convert the similarity measure to a loss function for minimization.
+
+\subsection{Implementation Details}
+
+Implementing MI for differentiable optimization presents several challenges, which we address through the following approaches:
+
+\begin{itemize}
+    \item \textbf{Histogram Computation}: We compute joint and marginal histograms of image intensities using differentiable binning functions based on B-splines.
+    
+    \item \textbf{Parzen Window Estimation}: To create continuous, differentiable probability distributions, we employ Parzen window estimation with Gaussian kernels.
+    
+    \item \textbf{Normalized MI}: We implement normalized mutual information (NMI) as an alternative formulation:
+    \begin{equation}
+        \mathcal{L}_{\text{NMI}}(I_1, I_2) = -\frac{H(I_1) + H(I_2)}{H(I_1, I_2)}
+    \end{equation}
+    where $H(I_1)$ and $H(I_2)$ are the marginal entropies, and $H(I_1, I_2)$ is the joint entropy.
+\end{itemize}
+
+\subsection{Advantages and Limitations}
+
+MI offers significant advantages for cross-modal registration:
+\begin{itemize}
+    \item Captures complex, non-linear relationships between image intensities
+    \item Well-suited for cross-modal registration tasks \parencite{mi2003}
+    \item Robust to partial overlap between images
+\end{itemize}
+
+However, MI also has limitations:
+\begin{itemize}
+    \item Computationally expensive to calculate
+    \item Can have complex gradient behavior
+    \item May have a smaller capture range than other metrics
+    \item Requires careful implementation to ensure differentiability
+\end{itemize}
+
+\section{Weighted and Masked L2 Loss}
+
+The standard L2 loss treats all pixels equally, which may not be optimal for registration tasks where certain regions contain more relevant information than others. We extend the L2 loss with weighting and masking mechanisms to address this limitation.
+
+\subsection{Spatially Weighted L2 Loss}
+
+The spatially weighted L2 loss assigns different importance to different regions of the image:
+
+\begin{equation}
+    \mathcal{L}_{\text{wL2}}(I_1, I_2) = \frac{1}{N} \sum_{i=1}^{N} w(i) (I_1(i) - I_2(i))^2
+\end{equation}
+
+where $w(i)$ is a weight value for pixel $i$. We explore several strategies for determining these weights:
+
+\begin{itemize}
+    \item \textbf{Gradient-based weighting}: Assigning higher weights to regions with high gradient magnitude, which typically correspond to edges and features.
+    
+    \item \textbf{Vessel-enhanced weighting}: Using vessel enhancement filters to prioritize vascular structures, which are prominent landmarks in brain surface images.
+    
+    \item \textbf{Saliency-based weighting}: Employing visual saliency models to identify regions that are perceptually important.
+\end{itemize}
+
+\subsection{Binary Masking}
+
+Binary masking is a special case of weighting where $w(i) \in \{0, 1\}$. This approach excludes certain regions from the loss calculation entirely:
+
+\begin{equation}
+    \mathcal{L}_{\text{mL2}}(I_1, I_2) = \frac{1}{\sum_{i=1}^{N} m(i)} \sum_{i=1}^{N} m(i) (I_1(i) - I_2(i))^2
+\end{equation}
+
+where $m(i) \in \{0, 1\}$ is a binary mask. Binary masking is particularly useful for:
+
+\begin{itemize}
+    \item Excluding background regions
+    \item Focusing on regions of interest (e.g., the exposed brain surface)
+    \item Handling partial overlap between the preoperative model and intraoperative view
+\end{itemize}
+
+\subsection{Implementation Details}
+
+Our implementation of weighted and masked L2 loss includes:
+
+\begin{itemize}
+    \item \textbf{Automatic mask generation}: Algorithms for automatically generating masks based on image content.
+    
+    \item \textbf{Differentiable weighting}: Ensuring that the weighting mechanism preserves differentiability for gradient-based optimization.
+    
+    \item \textbf{Adaptive weighting}: Dynamically adjusting weights based on the current registration state.
+\end{itemize}
+
+\section{Combined Loss Functions}
+
+Different loss functions capture different aspects of image similarity. To leverage the complementary strengths of various metrics, we explore combinations of loss functions:
+
+\begin{equation}
+    \mathcal{L}_{\text{combined}} = \alpha \mathcal{L}_1 + \beta \mathcal{L}_2 + \gamma \mathcal{L}_3
+\end{equation}
+
+where $\mathcal{L}_1$, $\mathcal{L}_2$, and $\mathcal{L}_3$ are different loss functions, and $\alpha$, $\beta$, and $\gamma$ are weighting coefficients.
+
+\subsection{Adaptive Weighting Strategies}
+
+Instead of fixed weights, we implement adaptive weighting strategies that adjust the contribution of each loss component based on the current registration state:
+
+\begin{itemize}
+    \item \textbf{Phase-based weighting}: Using different weights during different phases of the optimization (e.g., coarse-to-fine alignment).
+    
+    \item \textbf{Confidence-based weighting}: Adjusting weights based on the confidence or reliability of each metric for the current images.
+    
+    \item \textbf{Gradient-based weighting}: Weighting loss components based on the magnitude and direction of their gradients to improve convergence.
+\end{itemize}
+
+\section{Experimental Evaluation of Loss Functions}
+
+To systematically evaluate the effectiveness of different loss functions for NeRF-based intraoperative registration, we conduct a series of experiments comparing their performance under various conditions.
+
+\subsection{Experimental Setup}
+
+The experiments are designed to test the following aspects:
+
+\begin{itemize}
+    \item \textbf{Registration Accuracy}: Ability to achieve accurate alignment measured by pose error and target registration error.
+    
+    \item \textbf{Convergence Behavior}: Speed of convergence and ability to avoid local minima.
+    
+    \item \textbf{Robustness to Modality Differences}: Performance when facing differences in appearance between preoperative and intraoperative images.
+    
+    \item \textbf{Sensitivity to Initialization}: Capture range and dependency on initial pose estimates.
+\end{itemize}
+
+\subsection{Results and Analysis}
+
+The detailed results of these experiments are presented in Chapter~\ref{chapter:results}. However, preliminary findings indicate that:
+
+\begin{itemize}
+    \item NCC consistently outperforms L2 loss in the presence of intensity variations.
+    
+    \item MI shows promise for handling complex cross-modal differences but requires careful implementation to ensure stable gradients.
+    
+    \item Weighted L2 loss with gradient-based or vessel-enhanced weighting significantly improves over standard L2 loss.
+    
+    \item Combined loss functions can leverage complementary strengths, especially when using adaptive weighting strategies.
+\end{itemize}
+
+\section{Summary}
+
+This chapter has presented a comprehensive exploration of various loss functions for NeRF-based intraoperative registration. We have detailed the mathematical formulations, implementation considerations, and theoretical properties of L2 loss, Normalized Cross-Correlation, Mutual Information, and weighted/masked variants. Additionally, we have introduced combined loss functions with adaptive weighting strategies to leverage the complementary strengths of different metrics.
+
+The choice of loss function significantly impacts registration performance, particularly in the challenging context of cross-modal alignment between preoperative MRI-derived renderings and intraoperative camera images. The next chapter will explore another critical aspect of our approach: style transfer techniques for bridging the appearance gap between modalities. 

@@ -1,0 +1,89 @@
+\chapter{Background and Related Work}
+
+\section{Neural Radiance Fields}
+Neural Radiance Fields (NeRFs) \cite{mildenhall2020nerf} represent a paradigm shift in 3D scene representation. Unlike traditional explicit representations such as meshes or voxel grids, NeRFs encode scenes as continuous volumetric functions using neural networks. This section provides an overview of NeRFs and their applications.
+
+\subsection{NeRF Fundamentals}
+A Neural Radiance Field is a continuous 5D function that maps a 3D location $(x, y, z)$ and viewing direction $(\theta, \phi)$ to a color $(r, g, b)$ and volume density $\sigma$. This function is typically implemented as a multi-layer perceptron (MLP):
+
+\begin{equation}
+F_\Theta: (x, y, z, \theta, \phi) \rightarrow (r, g, b, \sigma)
+\end{equation}
+
+where $\Theta$ represents the parameters of the neural network. To render an image from a specific camera pose, rays are cast through each pixel of the virtual camera. Points are sampled along each ray, and the network predicts the color and density at each point. These predictions are then composited using volume rendering techniques to produce the final pixel color.
+
+\subsection{NeRF Variants and Improvements}
+Since the introduction of the original NeRF, numerous variants have been proposed to address its limitations:
+
+\begin{itemize}
+    \item \textbf{Instant-NGP} \cite{muller2022instant}: Accelerates NeRF training and rendering using a multiresolution hash encoding, reducing training time from hours to minutes.
+    
+    \item \textbf{Nerfstudio} \cite{tancik2023nerfstudio}: A modular framework that provides abstractions for developing and experimenting with different NeRF implementations.
+    
+    \item \textbf{NeRFmm} \cite{wang2021nerfmm}: Extends NeRFs to handle multi-view, multi-exposure images, which is particularly relevant for medical imaging where different modalities may be used.
+\end{itemize}
+
+\section{Intraoperative Registration}
+Intraoperative registration is the process of aligning preoperative imaging data (such as MRI or CT scans) with the current state of the patient during surgery. This alignment is crucial for image-guided surgery, allowing surgeons to navigate with precision and avoid critical structures.
+
+\subsection{Traditional Registration Methods}
+Traditional registration methods can be categorized into:
+
+\begin{itemize}
+    \item \textbf{Rigid Registration}: Assumes that the transformation between the preoperative and intraoperative images can be described by a combination of rotation and translation.
+    
+    \item \textbf{Non-rigid Registration}: Accounts for deformations by allowing local transformations, often modeled using splines or physical models.
+    
+    \item \textbf{Feature-based Registration}: Identifies and matches corresponding features (landmarks, edges, etc.) between the preoperative and intraoperative images.
+    
+    \item \textbf{Intensity-based Registration}: Optimizes a similarity measure between the intensity patterns of the images.
+\end{itemize}
+
+\subsection{Challenges in Neurosurgical Registration}
+Brain registration during neurosurgery presents unique challenges:
+
+\begin{itemize}
+    \item \textbf{Brain Shift}: The brain can deform significantly after the skull is opened due to gravity, loss of cerebrospinal fluid, and tissue manipulation.
+    
+    \item \textbf{Time Constraints}: Registration must be performed quickly to be useful during surgery.
+    
+    \item \textbf{Limited Intraoperative Imaging}: High-quality imaging modalities may not be available in the operating room.
+    
+    \item \textbf{Cross-modal Registration}: Preoperative MRI must often be registered with intraoperative ultrasound or optical images.
+\end{itemize}
+
+\section{NeRF-based Registration}
+Recent work has explored the use of NeRFs for registration tasks, leveraging their differentiable nature for optimization.
+
+\subsection{iNeRF}
+iNeRF \cite{yen2021inerf} inverts the traditional NeRF process by optimizing camera poses to match observed images rather than optimizing the NeRF parameters to match known poses. This approach has been demonstrated for pose estimation in general scenes but has limitations in medical contexts.
+
+\subsection{Cross-Modal Inverse Neural Rendering}
+Wang et al. \cite{wang2021cross} proposed a method for intraoperative registration using cross-modal inverse neural rendering. Their approach addresses the challenge of registering preoperative MRI data with intraoperative optical images by using a neural renderer to bridge the modality gap.
+
+\subsection{Parallel Inversion}
+Parallel Inversion \cite{wang2021parallel} improves upon iNeRF by performing multiple inversions in parallel, increasing robustness to local minima and improving convergence speed. This approach is particularly relevant for real-time applications such as intraoperative registration.
+
+\section{Style Transfer and Hypernetworks}
+Style transfer techniques can be used to address the cross-modal nature of medical image registration by transforming images from one modality to appear as if they were acquired using another modality.
+
+\subsection{Neural Style Transfer}
+Neural style transfer \cite{gatys2016image} uses convolutional neural networks to separate and recombine the content and style of images. This technique has been applied to medical imaging to bridge the gap between different modalities.
+
+\subsection{Hypernetworks for Style Transfer}
+Hypernetworks are networks that generate the weights for another network. In the context of style transfer, a hypernetwork can be trained to generate style-specific parameters for a rendering network, allowing for efficient adaptation to different imaging modalities.
+
+\section{Loss Functions for Registration}
+The choice of loss function is critical for registration accuracy. Various loss functions have been proposed for medical image registration:
+
+\begin{itemize}
+    \item \textbf{L1/L2 Loss}: Simple pixel-wise differences, which may not capture structural similarities.
+    
+    \item \textbf{Structural Similarity Index (SSIM)} \cite{wang2004image}: Measures the structural similarity between images, accounting for luminance, contrast, and structure.
+    
+    \item \textbf{Mutual Information}: A statistical measure that quantifies the mutual dependence between two variables, useful for cross-modal registration.
+    
+    \item \textbf{Normalized Cross-Correlation}: Measures the similarity between two signals, invariant to linear transformations.
+\end{itemize}
+
+This thesis builds upon these foundations to develop and evaluate a comprehensive framework for NeRF-based intraoperative registration, with a focus on loss function exploration and hypernetwork-based style transfer for improved cross-modal registration. 

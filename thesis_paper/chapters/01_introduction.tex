@@ -1,0 +1,176 @@
+% !TeX root = ../main.tex
+% Add the above to each chapter to make compiling the PDF easier in some editors.
+
+\chapter{Introduction}\label{chapter:introduction}
+
+Neurosurgery is a high-precision medical field where accuracy is paramount to patient outcomes. During brain tumor resection procedures, surgeons rely on image-guided navigation systems to assist with spatial orientation and to locate critical structures within the brain \parencite{navab2015surgical}. These systems typically align preoperative Magnetic Resonance Imaging (MRI) data with the patient's physical anatomy through a process called registration. Traditional registration methods often employ point-based or surface-based techniques, which can be time-consuming, require specialized equipment, and are susceptible to inaccuracies due to brain shift—the deformation of brain tissue that occurs once the skull is opened.
+
+The field of computer vision has recently seen remarkable advancements in neural scene representation techniques, particularly with the introduction of Neural Radiance Fields (NeRFs) \parencite{mildenhall2020nerf}. NeRFs represent scenes as continuous functions that map 3D coordinates and viewing directions to color and density values, enabling high-quality novel view synthesis. These implicit neural representations have revolutionized how we model and render 3D environments, offering differentiable, continuous scene representations that can be optimized through gradient-based methods.
+
+This thesis builds upon recent work that leverages NeRFs for pose estimation \parencite{yen2020inerf} and, more specifically, for intraoperative registration \parencite{fehrentz2024intraoperative}. We propose to enhance NeRF-based intraoperative registration through two main contributions: (1) a comprehensive exploration of alternative loss functions beyond the standard L2 loss, and (2) an investigation into the effects of style transfer on registration accuracy.
+
+\section{Motivation}
+
+Current intraoperative registration techniques face several challenges:
+
+\begin{enumerate}
+    \item \textbf{Brain shift}: The brain's position and shape change during surgery due to cerebrospinal fluid drainage, gravity, and surgical manipulations.
+    \item \textbf{Cross-modal alignment}: Matching preoperative MRI data with intraoperative camera images requires bridging different imaging modalities.
+    \item \textbf{Speed and accuracy}: Registration must be both precise and fast enough to be clinically viable during surgery.
+    \item \textbf{Surgical workflow integration}: Registration methods should integrate seamlessly into existing surgical workflows without requiring additional equipment or extensive time.
+\end{enumerate}
+
+The approach presented by \textcite{fehrentz2024intraoperative} addresses these challenges by using neural rendering for registration. However, their work primarily focuses on a hypernetwork-based approach for appearance adaptation and employs a standard L2 loss for optimization. This thesis extends their work by exploring whether alternative loss functions might yield better registration results and by analyzing how different style transfer techniques affect the registration process.
+
+\section{Research Questions}
+
+This thesis addresses the following key research questions:
+
+\begin{enumerate}
+    \item How do different loss functions (Mutual Information, Normalized Cross-Correlation, and weighted/masked L2) compare to the standard L2 loss in NeRF-based intraoperative registration?
+    \item What impact do various hypernetwork-generated styles have on registration accuracy when using NeRF-based methods?
+    \item Can the combination of specific loss functions and style transfer techniques improve registration robustness against variations in lighting, perspective, and tissue appearance?
+\end{enumerate}
+
+\section{Contributions}
+
+The main contributions of this thesis are:
+
+\begin{enumerate}
+    \item A systematic evaluation of multiple loss functions for NeRF-based intraoperative registration.
+    \item An analysis of hypernetwork-based style transfer effects on registration accuracy.
+    \item An implementation built on top of nerfstudio to make the approach NeRF-implementation agnostic.
+    \item Experimental results comparing different combinations of loss functions and style transfer techniques.
+\end{enumerate}
+
+\section{Thesis Structure}
+
+The remainder of this thesis is organized as follows:
+
+\begin{itemize}
+    \item \textbf{Chapter~\ref{chapter:background}}: Provides the necessary background on neural radiance fields, pose estimation, and intraoperative registration.
+    \item \textbf{Chapter~\ref{chapter:methodology}}: Explains the methodology and overall approach for NeRF-based registration.
+    \item \textbf{Chapter~\ref{chapter:loss_functions}}: Details the loss functions implemented and evaluated in this work.
+    \item \textbf{Chapter~\ref{chapter:style_transfer}}: Explores the style transfer techniques and their integration with the registration process.
+    \item \textbf{Chapter~\ref{chapter:experiments}}: Describes the experimental setup, datasets, and evaluation metrics.
+    \item \textbf{Chapter~\ref{chapter:results}}: Presents the results of our experiments and analyses.
+    \item \textbf{Chapter~\ref{chapter:discussion}}: Discusses the implications of our findings and their relevance to the field.
+    \item \textbf{Chapter~\ref{chapter:conclusion}}: Summarizes the thesis and suggests directions for future research.
+\end{itemize}
+
+\section{Section}
+Citation test (with Biber)~\parencite{latex}.
+
+\subsection{Subsection}
+
+See~\autoref{tab:sample}, \autoref{fig:sample-drawing}, \autoref{fig:sample-plot}, \autoref{fig:sample-listing}, \autoref{fig:tum}, \autoref{fig:tumslide}.
+
+\begin{table}[htpb]
+  \caption[Example table]{An example for a simple table.}\label{tab:sample}
+  \centering
+  \begin{tabular}{l l l l}
+    \toprule
+      A & B & C & D \\
+    \midrule
+      1 & 2 & 1 & 2 \\
+      2 & 3 & 2 & 3 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[htpb]
+  \centering
+  % This should probably go into a file in figures/
+  \begin{tikzpicture}[node distance=3cm]
+    \node (R0) {$R_1$};
+    \node (R1) [right of=R0] {$R_2$};
+    \node (R2) [below of=R1] {$R_4$};
+    \node (R3) [below of=R0] {$R_3$};
+    \node (R4) [right of=R1] {$R_5$};
+
+    \path[every node]
+      (R0) edge (R1)
+      (R0) edge (R3)
+      (R3) edge (R2)
+      (R2) edge (R1)
+      (R1) edge (R4);
+  \end{tikzpicture}
+  \caption[Example drawing]{An example for a simple drawing.}\label{fig:sample-drawing}
+\end{figure}
+
+\begin{figure}[htpb]
+  \centering
+
+  \pgfplotstableset{col sep=&, row sep=\\}
+  % This should probably go into a file in data/
+  \pgfplotstableread{
+    a & b    \\
+    1 & 1000 \\
+    2 & 1500 \\
+    3 & 1600 \\
+  }\exampleA
+  \pgfplotstableread{
+    a & b    \\
+    1 & 1200 \\
+    2 & 800 \\
+    3 & 1400 \\
+  }\exampleB
+  % This should probably go into a file in figures/
+  \begin{tikzpicture}
+    \begin{axis}[
+        ymin=0,
+        legend style={legend pos=south east},
+        grid,
+        thick,
+        ylabel=Y,
+        xlabel=X
+      ]
+      \addplot table[x=a, y=b]{\exampleA};
+      \addlegendentry{Example A};
+      \addplot table[x=a, y=b]{\exampleB};
+      \addlegendentry{Example B};
+    \end{axis}
+  \end{tikzpicture}
+  \caption[Example plot]{An example for a simple plot.}\label{fig:sample-plot}
+\end{figure}
+
+\begin{figure}[htpb]
+  \centering
+  \begin{tabular}{c}
+  \begin{lstlisting}[language=SQL]
+    SELECT * FROM tbl WHERE tbl.str = "str"
+  \end{lstlisting}
+  \end{tabular}
+  \caption[Example listing]{An example for a source code listing.}\label{fig:sample-listing}
+\end{figure}
+
+\begin{figure}[htpb]
+  \centering
+  \includegraphics[width=0.8\textwidth]{tum}
+  \caption[Something else can be written here for listing this, otherwise the caption will be written!]{Includegraphics searches for the filename without extension first in logos, then in figures.} \label{fig:tum}
+\end{figure}
+
+\begin{figure}[htpb]
+  \centering
+  \includegraphics[width=0.8\textwidth]{figures/tum}
+  \caption{For pictures with the same name, the direct folder needs to be chosen.} \label{fig:tumslide}
+\end{figure}
+
+\begin{figure}[!tbp]
+  \centering
+  \subfloat[TUM Logo][The logo.]{\includegraphics[height=0.2\textheight]{tum}\label{fig:tum1}}
+  \hfill
+  \subfloat[TUM Slide][The famous slide.]{\includegraphics[height=0.2\textheight]{figures/tum}\label{fig:tum2}}
+  \caption{Two TUM pictures side by side.}
+  \label{fig:sidebyside}
+\end{figure}
+
+This is how the glossary will be used.
+
+\Glspl{ddye}, \gls{r0}, \gls{R0}, and \gls{kdeac}. Also, the \glspl{tum} has many \glspl{computer}, not only one \Gls{computer}. Subsequent acronym usage will only print the short version of \glspl{tuma} (take care of plural, if needed!), like here with \gls{tuma}, too. It can also be --> \glsdisp{tum}{hidden}\footnote{Example for a hidden TUM glossary entry.} <--.
+
+\todo{Now it is your turn to write your thesis.
+
+This will be a few tough weeks.}
+
+\done{Nevertheless, celebrate it when it is done!}

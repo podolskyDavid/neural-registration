@@ -1,0 +1,177 @@
+% !TeX root = ../main.tex
+
+\chapter{Methodology}\label{chapter:methodology}
+
+This chapter presents the methodology employed in this thesis for enhancing intraoperative registration using Neural Radiance Fields (NeRFs). We first provide an overview of the registration approach, followed by details on the implementation framework, the process of training NeRFs from preoperative data, and the registration optimization procedure.
+
+\section{Overview of the NeRF-based Registration Approach}
+
+The core methodology of this thesis builds upon the inverse Neural Radiance Field (iNeRF) approach originally proposed by \textcite{yen2020inerf} and extended for cross-modal intraoperative registration by \textcite{fehrentz2024intraoperative}. Figure~\ref{fig:overview} provides a high-level overview of the approach.
+
+% Placeholder for overview figure
+\begin{figure}[htpb]
+  \centering
+  % Add actual figure in the implementation
+  \caption{Overview of the NeRF-based intraoperative registration approach. The method involves preoperative training of a NeRF model on MRI data, followed by intraoperative optimization of camera pose and appearance parameters to match the target surgical image.}
+  \label{fig:overview}
+\end{figure}
+
+The registration process consists of two main phases:
+
+\begin{enumerate}
+    \item \textbf{Preoperative Phase}: A NeRF model is trained using preoperative MRI data to learn an implicit representation of the brain's structure. Additionally, a hypernetwork for style adaptation is trained to enable cross-modal appearance matching.
+    
+    \item \textbf{Intraoperative Phase}: During surgery, the pre-trained NeRF is used as a differentiable rendering engine. Given a target intraoperative image, the camera pose (6 degrees of freedom) is optimized through backpropagation to match the rendered view with the target image.
+\end{enumerate}
+
+\section{Implementation Framework}
+
+Our implementation leverages the nerfstudio framework to ensure flexibility and compatibility with various NeRF architectures. The key components of our implementation include:
+
+\begin{itemize}
+    \item \textbf{NeRF Model}: We support multiple NeRF variants, including the original NeRF \parencite{mildenhall2020nerf}, Instant-NGP \parencite{muller2022instant}, and Nerfacto, allowing us to evaluate the impact of different NeRF architectures on registration performance.
+    
+    \item \textbf{Camera Optimizer}: A differentiable camera pose optimization module that updates the 6DoF camera parameters (rotation and translation) based on the gradient of the selected loss function.
+    
+    \item \textbf{Hypernetwork Style Module}: An extension of the hypernetwork approach from \textcite{fehrentz2024intraoperative} that controls the appearance of the NeRF while preserving its structural representation.
+    
+    \item \textbf{Loss Function Module}: A pluggable interface for different loss functions, including L2, Normalized Cross-Correlation, Mutual Information, and variants of weighted/masked L2 loss.
+\end{itemize}
+
+The modular design of our implementation allows for easy experimentation with different combinations of NeRF architectures, loss functions, and style transfer techniques.
+
+\section{NeRF Training from Preoperative Data}
+
+\subsection{Data Preparation}
+
+The preoperative MRI data undergoes several preprocessing steps before NeRF training:
+
+\begin{enumerate}
+    \item \textbf{Segmentation}: Brain structures are segmented from the MRI volume to focus on relevant regions and reduce computational requirements.
+    
+    \item \textbf{View Synthesis}: Multiple synthetic views are generated from the volumetric MRI data to create a dataset of 2D images and corresponding camera poses for NeRF training.
+    
+    \item \textbf{Data Augmentation}: To improve the robustness of the NeRF model, we apply various data augmentation techniques, including random brightness and contrast adjustments, as well as simulated occlusions.
+\end{enumerate}
+
+\subsection{NeRF Training Procedure}
+
+The NeRF model is trained using standard procedures with some modifications to account for the medical imaging context:
+
+\begin{enumerate}
+    \item \textbf{Model Initialization}: The NeRF model architecture (Instant-NGP, Nerfacto, etc.) is initialized with random weights.
+    
+    \item \textbf{Training Loop}: The model is trained by rendering synthetic views and comparing them with the reference views generated from the MRI data. The model parameters are updated to minimize the rendering error using the Adam optimizer.
+    
+    \item \textbf{Density Refinement}: Special attention is paid to accurately modeling the brain surface, as this is critical for registration. We employ additional loss terms to encourage accurate density modeling at tissue boundaries.
+\end{enumerate}
+
+\subsection{Hypernetwork Training for Style Adaptation}
+
+To enable cross-modal registration, we train a hypernetwork that adapts the appearance of the NeRF to match different visual styles:
+
+\begin{enumerate}
+    \item \textbf{Hypernetwork Architecture}: The hypernetwork is a small MLP that takes a style code as input and outputs parameters for a subset of the NeRF's color prediction layers.
+    
+    \item \textbf{Style Encoding}: We experiment with various methods for encoding style information, including:
+    \begin{itemize}
+        \item Direct RGB statistics (mean and variance)
+        \item Y'UV color space transformations
+        \item Histogram of Oriented Gradients (HOG) features
+        \item Gram matrices for texture representation
+    \end{itemize}
+    
+    \item \textbf{Training Procedure}: The hypernetwork is trained by presenting examples of the same brain structure with different appearance styles (e.g., different contrast, lighting, or color schemes). The network learns to map these styles to appropriate NeRF parameters while maintaining structural consistency.
+\end{enumerate}
+
+\section{Registration Optimization}
+
+During the intraoperative phase, the pre-trained NeRF and hypernetwork are used to perform registration by optimizing camera pose parameters to match a target intraoperative image.
+
+\subsection{Problem Formulation}
+
+The registration problem is formulated as an optimization of camera pose parameters $\xi$ and style parameters $s$ to minimize a dissimilarity measure between the target intraoperative image $I_{\text{target}}$ and the image rendered from the NeRF:
+
+\begin{equation}
+    \hat{\xi}, \hat{s} = \arg\min_{\xi, s} \mathcal{L}(I_{\text{target}}, I_{\text{rendered}}(\xi, s))
+\end{equation}
+
+where $I_{\text{rendered}}(\xi, s)$ is the image rendered from the NeRF using camera pose $\xi$ and style parameters $s$, and $\mathcal{L}$ is a loss function measuring the dissimilarity between the images.
+
+\subsection{Optimization Procedure}
+
+The optimization procedure consists of the following steps:
+
+\begin{enumerate}
+    \item \textbf{Initialization}: Camera pose is initialized based on surgical setup information or using a coarse alignment step. Style parameters are initialized to default values or based on statistical analysis of the target image.
+    
+    \item \textbf{Iterative Optimization}: The following steps are repeated until convergence or for a fixed number of iterations:
+    \begin{itemize}
+        \item Render an image from the current camera pose and style parameters
+        \item Compute the loss between the rendered image and the target image
+        \item Compute gradients with respect to camera pose and style parameters
+        \item Update parameters using gradient descent or Adam optimizer
+    \end{itemize}
+    
+    \item \textbf{Multi-resolution Approach}: To avoid local minima, we employ a multi-resolution approach, starting with lower-resolution images and progressively increasing resolution.
+    
+    \item \textbf{Regularization}: Regularization terms are added to the optimization to prevent extreme camera poses or style parameters.
+\end{enumerate}
+
+\subsection{Ray Sampling Strategies}
+
+To improve efficiency and robustness, we experiment with different ray sampling strategies during optimization:
+
+\begin{itemize}
+    \item \textbf{Random sampling}: Randomly selecting rays for each optimization step.
+    
+    \item \textbf{Importance sampling}: Focusing on regions with high error or important anatomical features.
+    
+    \item \textbf{Patch-based sampling}: Using coherent patches of rays to capture local image structure.
+\end{itemize}
+
+\section{Experimental Setup}
+
+To evaluate our approach, we design experiments that systematically compare different loss functions and style transfer techniques in the context of intraoperative registration.
+
+\subsection{Dataset}
+
+We use both synthetic and real clinical data for our experiments:
+
+\begin{itemize}
+    \item \textbf{Synthetic Dataset}: We generate synthetic data by rendering views from 3D brain models with controlled variations in pose, lighting, and appearance. This allows for quantitative evaluation with known ground truth poses.
+    
+    \item \textbf{Clinical Dataset}: We use retrospective clinical data from neurosurgical procedures, including preoperative MRI scans and intraoperative images captured during surgery.
+\end{itemize}
+
+\subsection{Evaluation Metrics}
+
+We evaluate registration performance using the following metrics:
+
+\begin{itemize}
+    \item \textbf{Pose Error}: Quantitative measures of the difference between estimated and ground truth poses, including rotational error (degrees) and translational error (mm).
+    
+    \item \textbf{Target Registration Error (TRE)}: The average distance between corresponding anatomical landmarks after registration.
+    
+    \item \textbf{Image Similarity Metrics}: NCC, MI, and SSIM scores between the registered images.
+    
+    \item \textbf{Convergence Rate}: The number of iterations required to achieve convergence and the optimization stability.
+\end{itemize}
+
+\subsection{Experimental Variables}
+
+Our experiments systematically vary the following factors:
+
+\begin{itemize}
+    \item \textbf{Loss Functions}: L2, NCC, MI, weighted/masked L2, and combinations thereof.
+    
+    \item \textbf{Style Transfer Techniques}: Different approaches for style encoding and adaptation.
+    
+    \item \textbf{NeRF Architectures}: Original NeRF, Instant-NGP, and Nerfacto.
+    
+    \item \textbf{Initial Pose Error}: Various levels of misalignment to evaluate the capture range of the registration.
+    
+    \item \textbf{Image Conditions}: Different lighting conditions, occlusions, and tissue appearance variations.
+\end{itemize}
+
+The results of these experiments are presented and analyzed in Chapters~\ref{chapter:loss_functions}, \ref{chapter:style_transfer}, and \ref{chapter:results}. 

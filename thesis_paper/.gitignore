@@ -1,0 +1,30 @@
+# LaTeX build files
+build/
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.xdy
+*.glo
+*.acn
+
+# Editor files
+*~
+.DS_Store
+.vscode/
+.idea/
+
+# Temporary files
+*.swp
+*.swo
+*.tmp
+*.temp 

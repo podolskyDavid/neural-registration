@@ -1,0 +1,157 @@
+% !TeX root = ../main.tex
+
+\chapter{Background and Related Work}\label{chapter:background}
+
+This chapter provides the necessary theoretical foundation and contextual background for understanding the work presented in this thesis. We first review the field of intraoperative registration, followed by an overview of Neural Radiance Fields (NeRFs) and their applications in pose estimation. Finally, we discuss relevant work on loss functions for image registration and style transfer techniques.
+
+\section{Intraoperative Registration in Neurosurgery}
+
+Intraoperative registration refers to the process of aligning preoperative imaging data, such as Magnetic Resonance Imaging (MRI) scans, with the patient's physical anatomy during surgery. This alignment enables surgeons to navigate with respect to preoperative imaging data, which provides crucial information about anatomical structures not visible on the brain surface, such as tumor boundaries and critical functional areas.
+
+\subsection{Traditional Registration Approaches}
+
+Traditional approaches to intraoperative registration in neurosurgery can be broadly categorized into the following methods:
+
+\begin{itemize}
+    \item \textbf{Point-based registration}: This approach identifies and matches corresponding anatomical landmarks or artificially placed fiducial markers in both the preoperative images and physical patient. While conceptually simple, it requires accurate identification of landmarks and can be time-consuming.
+    
+    \item \textbf{Surface-based registration}: This technique matches surfaces extracted from preoperative imaging with surfaces captured intraoperatively, often using techniques like the Iterative Closest Point (ICP) algorithm. Surface-based approaches typically require specialized equipment, such as laser scanners or stereo cameras, to capture the intraoperative surface.
+    
+    \item \textbf{Volume-based registration}: These methods use intensity-based similarity measures to align volumetric images, but they typically require intraoperative imaging modalities such as ultrasound or intraoperative MRI, which may not be available in all surgical settings.
+\end{itemize}
+
+A significant challenge in neurosurgical registration is brain shift, the deformation of brain tissue that occurs during surgery due to factors such as gravity, cerebrospinal fluid drainage, and surgical manipulations. This phenomenon can significantly reduce the accuracy of rigid registration methods and necessitates more advanced techniques.
+
+\subsection{Cross-Modal Registration}
+
+Cross-modal registration refers to the alignment of images from different imaging modalities. In the context of neurosurgery, this often involves aligning preoperative MRI data with intraoperative camera images. This presents unique challenges due to differences in:
+
+\begin{itemize}
+    \item \textbf{Information content}: MRI provides volumetric data with tissue contrast, while optical images capture surface appearance with details like blood vessels and lighting effects.
+    \item \textbf{Geometric representation}: MRI data is three-dimensional, while camera images are two-dimensional projections.
+    \item \textbf{Appearance}: The visual appearance of tissues differs significantly between MRI and optical images due to different physical principles of image formation.
+\end{itemize}
+
+Previous work in cross-modal registration has employed techniques such as feature extraction, mutual information maximization, and deep learning-based approaches to bridge these differences.
+
+\section{Neural Radiance Fields (NeRFs)}
+
+Neural Radiance Fields, introduced by \textcite{mildenhall2020nerf}, represent a novel approach to scene representation and novel view synthesis. Unlike traditional computer graphics methods that use explicit representations like meshes or point clouds, NeRFs employ an implicit neural representation to model scenes.
+
+\subsection{NeRF Representation}
+
+A NeRF is typically implemented as a multi-layer perceptron (MLP) that maps a 3D coordinate $\mathbf{x} = (x, y, z)$ and viewing direction $\mathbf{d} = (\theta, \phi)$ to a color $\mathbf{c} = (r, g, b)$ and volume density $\sigma$:
+
+\begin{equation}
+    F_\Theta: (\mathbf{x}, \mathbf{d}) \rightarrow (\mathbf{c}, \sigma)
+\end{equation}
+
+where $\Theta$ represents the learnable parameters of the neural network. This continuous, differentiable representation allows for rendering from arbitrary viewpoints through volume rendering techniques.
+
+The rendering process involves casting rays from a camera through image pixels and evaluating the NeRF at multiple points along each ray. The color of a pixel is computed as a weighted sum of the colors along the ray, with weights determined by the volume densities:
+
+\begin{equation}
+    C(\mathbf{r}) = \int_{t_n}^{t_f} T(t) \sigma(t) \mathbf{c}(t) dt
+\end{equation}
+
+where $T(t) = \exp\left(-\int_{t_n}^{t} \sigma(s) ds\right)$ represents the accumulated transmittance along the ray up to point $t$.
+
+\subsection{NeRF Variants}
+
+Since the introduction of the original NeRF, numerous variants have been developed to address limitations and extend capabilities:
+
+\begin{itemize}
+    \item \textbf{Instant-NGP} \parencite{muller2022instant}: Accelerates NeRF training and rendering through multi-resolution hash encoding, reducing training time from days to minutes.
+    
+    \item \textbf{HyperNeRF} \parencite{wang2023hypernerf}: Extends NeRFs to handle topological variations in dynamic scenes through a higher-dimensional representation.
+    
+    \item \textbf{Nerfacto}: An implementation-agnostic framework that combines advances from various NeRF variants for improved performance.
+\end{itemize}
+
+\subsection{iNeRF: Inverting Neural Radiance Fields for Pose Estimation}
+
+\textcite{yen2020inerf} introduced iNeRF, a method that leverages the differentiable nature of NeRFs for pose estimation. Given a target image and a pre-trained NeRF, iNeRF estimates the camera pose from which the target image was captured. This is achieved by optimizing the camera pose parameters to minimize the difference between the rendered image (from the current pose estimate) and the target image.
+
+The key insight of iNeRF is that the camera pose can be optimized through backpropagation, utilizing the differentiable nature of both the NeRF representation and the rendering process. This optimization is formulated as:
+
+\begin{equation}
+    \hat{\xi} = \arg\min_{\xi} \mathcal{L}(I_{\text{target}}, I_{\text{rendered}}(\xi))
+\end{equation}
+
+where $\xi$ represents the camera pose parameters, $I_{\text{target}}$ is the target image, $I_{\text{rendered}}(\xi)$ is the image rendered from the NeRF using pose $\xi$, and $\mathcal{L}$ is a loss function measuring the dissimilarity between the images.
+
+\section{Cross-Modal Inverse Neural Rendering for Registration}
+
+Building on the concept of iNeRF, \textcite{fehrentz2024intraoperative} proposed a method for intraoperative registration using cross-modal inverse neural rendering. Their approach addresses the challenge of cross-modal registration by separating the neural representation into structural and appearance components:
+
+\begin{itemize}
+    \item The \textbf{structural component} captures the geometric properties of the brain and is learned from preoperative MRI data.
+    
+    \item The \textbf{appearance component} is adapted intraoperatively to match the visual characteristics of surgical images.
+\end{itemize}
+
+This separation is achieved through a multi-style hypernetwork that controls the appearance of the NeRF while preserving its learned representation of the anatomy. The hypernetwork generates parameters for a subset of the NeRF's layers, allowing it to produce different appearances for the same underlying geometry.
+
+During registration, the approach optimizes both the camera pose and the appearance parameters to minimize the dissimilarity between the rendered and target intraoperative images. This method has shown promising results in clinical data, outperforming state-of-the-art methods while meeting clinical standards for registration accuracy.
+
+\section{Loss Functions for Image Registration}
+
+The choice of loss function is crucial in registration tasks, as it defines the measure of similarity between images that guides the optimization process. Different loss functions capture different aspects of image similarity and may be more or less suitable depending on the specific registration task.
+
+\subsection{L2 Loss}
+
+The L2 loss, or mean squared error (MSE), is commonly used in image registration tasks due to its simplicity and differentiability. It calculates the squared Euclidean distance between two images:
+
+\begin{equation}
+    \mathcal{L}_{\text{L2}}(I_1, I_2) = \frac{1}{N} \sum_{i=1}^{N} (I_1(i) - I_2(i))^2
+\end{equation}
+
+where $N$ is the number of pixels. While straightforward, L2 loss assumes a direct intensity correspondence between images, which may not hold in cross-modal scenarios.
+
+\subsection{Normalized Cross-Correlation (NCC)}
+
+Normalized Cross-Correlation measures the similarity between two images independently of linear intensity transformations:
+
+\begin{equation}
+    \mathcal{L}_{\text{NCC}}(I_1, I_2) = -\frac{\sum_{i=1}^{N} (I_1(i) - \bar{I}_1)(I_2(i) - \bar{I}_2)}{\sqrt{\sum_{i=1}^{N} (I_1(i) - \bar{I}_1)^2 \sum_{i=1}^{N} (I_2(i) - \bar{I}_2)^2}}
+\end{equation}
+
+where $\bar{I}_1$ and $\bar{I}_2$ are the mean intensities of the respective images. NCC is particularly useful when images have different contrast or brightness levels \parencite{nccreg}.
+
+\subsection{Mutual Information (MI)}
+
+Mutual Information is a statistical measure that quantifies the mutual dependence between two random variables, making it particularly suitable for cross-modal registration where the relationship between intensities is complex:
+
+\begin{equation}
+    \mathcal{L}_{\text{MI}}(I_1, I_2) = -\sum_{i,j} p_{I_1,I_2}(i,j) \log\left(\frac{p_{I_1,I_2}(i,j)}{p_{I_1}(i)p_{I_2}(j)}\right)
+\end{equation}
+
+where $p_{I_1,I_2}$ is the joint probability distribution of intensities in images $I_1$ and $I_2$, and $p_{I_1}$ and $p_{I_2}$ are their marginal distributions \parencite{mi2003}.
+
+\subsection{Weighted and Masked L2 Loss}
+
+Weighted and masked variants of the L2 loss assign different importance to different regions of the image:
+
+\begin{equation}
+    \mathcal{L}_{\text{wL2}}(I_1, I_2) = \frac{1}{N} \sum_{i=1}^{N} w(i) (I_1(i) - I_2(i))^2
+\end{equation}
+
+where $w(i)$ is a weight or mask value for pixel $i$. This approach can be useful for focusing the registration on regions of interest or for ignoring irrelevant areas.
+
+\section{Style Transfer Techniques}
+
+Style transfer refers to the process of transforming an image to have the visual style of another image while preserving its content. In the context of cross-modal registration, style transfer can be used to bridge the appearance gap between different imaging modalities.
+
+Various techniques for style transfer have been proposed, including:
+
+\begin{itemize}
+    \item \textbf{Gram-matrix-based methods}: These approaches capture style by computing correlations between feature activations in different layers of a neural network.
+    
+    \item \textbf{Hypernetwork-based style adaptation}: Hypernetworks generate parameters for another network based on style information, allowing for efficient style adaptation.
+    
+    \item \textbf{Feature space transformations}: These methods transform features in intermediate representations to match target style statistics.
+    
+    \item \textbf{Color space transformations}: Simpler approaches that match color distributions, such as histogram matching or transformations in alternative color spaces like Y'UV.
+\end{itemize}
+
+The approach by \textcite{fehrentz2024intraoperative} employs a hypernetwork-based technique for style adaptation, which we will build upon and extend in this thesis. 

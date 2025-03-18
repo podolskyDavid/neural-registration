@@ -1,0 +1,249 @@
+% !TeX root = ../main.tex
+
+\chapter{Experiments}\label{chapter:experiments}
+
+This chapter details the experimental methodology used to evaluate the performance of different loss functions and style transfer techniques in the context of NeRF-based intraoperative registration. We describe the datasets, evaluation metrics, implementation details, and experimental protocols designed to systematically assess the contributions of this thesis.
+
+\section{Experimental Objectives}
+
+The experiments in this thesis are designed to address the following key research questions:
+
+\begin{enumerate}
+    \item How do different loss functions compare in terms of registration accuracy, convergence speed, and robustness to initial conditions?
+    
+    \item What impact do different style transfer techniques have on cross-modal registration performance?
+    
+    \item How do various combinations of loss functions and style transfer methods perform in different clinical scenarios?
+    
+    \item What are the computational requirements and runtime characteristics of the different approaches?
+\end{enumerate}
+
+\section{Datasets}
+
+To ensure comprehensive evaluation, we utilize both synthetic and clinical datasets:
+
+\subsection{Synthetic Brain Dataset}
+
+We create a synthetic dataset to enable controlled experiments with ground truth camera poses:
+
+\begin{itemize}
+    \item \textbf{Data Generation}: A realistic 3D brain model is rendered from multiple viewpoints with varying lighting conditions, textures, and camera parameters.
+    
+    \item \textbf{Ground Truth}: The dataset includes ground truth camera poses and transformation matrices for accurate evaluation.
+    
+    \item \textbf{Appearance Variations}: We generate multiple appearance variants of the same structural content to simulate cross-modal differences.
+    
+    \item \textbf{Noise and Artifacts}: Controlled levels of noise, motion blur, and other artifacts are added to test robustness.
+\end{itemize}
+
+\subsection{Clinical Dataset}
+
+We also utilize a retrospective clinical dataset obtained from neurosurgical procedures:
+
+\begin{itemize}
+    \item \textbf{Data Collection}: The dataset consists of preoperative MRI scans and intraoperative images captured during brain tumor resection procedures.
+    
+    \item \textbf{Patient Population}: Data from 5 adult patients undergoing craniotomy for brain tumor resection.
+    
+    \item \textbf{Preoperative MRI}: T1-weighted MRI scans with gadolinium contrast, acquired according to standard clinical protocols.
+    
+    \item \textbf{Intraoperative Images}: Optical images captured during surgery using the operating microscope, showing the exposed cortical surface.
+    
+    \item \textbf{Reference Registration}: For evaluation purposes, a reference registration was established using a conventional navigation system with fiducial markers.
+\end{itemize}
+
+All clinical data was anonymized and used with appropriate institutional approval and informed consent from patients.
+
+\section{Implementation Details}
+
+\subsection{Software Framework}
+
+Our implementation is built on top of the nerfstudio framework, with custom extensions for registration and style transfer:
+
+\begin{itemize}
+    \item \textbf{Core Components}: Python-based implementation with PyTorch for deep learning and gradient-based optimization.
+    
+    \item \textbf{NeRF Variants}: Integration with multiple NeRF variants, including Instant-NGP \parencite{muller2022instant} and Nerfacto.
+    
+    \item \textbf{Loss Function Module}: Modular implementation of various loss functions and their combinations.
+    
+    \item \textbf{Hypernetwork Module}: Implementation of hypernetwork architectures for style control.
+    
+    \item \textbf{Style Encoding}: Implementations of different style encoding methods.
+\end{itemize}
+
+\subsection{Hardware Configuration}
+
+Experiments were conducted on the following hardware:
+
+\begin{itemize}
+    \item \textbf{GPU}: NVIDIA GeForce RTX 3090 with 24GB memory
+    \item \textbf{CPU}: Intel Core i9-10900K
+    \item \textbf{RAM}: 64GB DDR4
+\end{itemize}
+
+\subsection{Preprocessing Pipeline}
+
+The preprocessing pipeline for the clinical dataset includes:
+
+\begin{enumerate}
+    \item \textbf{MRI Segmentation}: Brain and tumor segmentation using automated methods with manual correction.
+    
+    \item \textbf{View Synthesis}: Generation of synthetic views from the volumetric MRI data for NeRF training.
+    
+    \item \textbf{Intraoperative Image Processing}: Rectification, color normalization, and artifact removal for intraoperative images.
+    
+    \item \textbf{Data Augmentation}: Generation of additional training data through augmentation techniques to improve robustness.
+\end{enumerate}
+
+\section{Experimental Protocol}
+
+\subsection{NeRF Training}
+
+The NeRF models are trained using the following protocol:
+
+\begin{itemize}
+    \item \textbf{Training Data}: Synthetic views generated from preoperative MRI data, with 100-200 views per patient.
+    
+    \item \textbf{Model Architecture}: Instant-NGP with a resolution of $2048^3$ voxels and 2-layer MLP for color prediction.
+    
+    \item \textbf{Training Parameters}: 20,000 iterations, batch size of 4096 rays, learning rate of $5 \times 10^{-4}$ with exponential decay.
+    
+    \item \textbf{Hypernetwork Training}: The style hypernetwork is trained simultaneously with the NeRF model, using examples of the same structure with different appearances.
+\end{itemize}
+
+\subsection{Registration Experiments}
+
+For each combination of loss function and style transfer method, we perform the following registration experiments:
+
+\begin{enumerate}
+    \item \textbf{Initialization Sensitivity}: Testing registration performance with different initial pose errors (5°, 10°, 15°, 20° rotational error and 5, 10, 15, 20 mm translational error).
+    
+    \item \textbf{Convergence Analysis}: Recording the optimization trajectory, including loss values, pose errors, and registration accuracy at each iteration.
+    
+    \item \textbf{Cross-Modal Performance}: Evaluating registration accuracy when matching MRI-derived renderings with intraoperative images of different appearance characteristics.
+    
+    \item \textbf{Runtime Performance}: Measuring computational requirements, including memory usage, processing time, and GPU utilization.
+\end{enumerate}
+
+Each experiment is repeated multiple times with different random seeds to ensure statistical significance.
+
+\section{Evaluation Metrics}
+
+\subsection{Registration Accuracy Metrics}
+
+We use the following metrics to evaluate registration accuracy:
+
+\begin{itemize}
+    \item \textbf{Pose Error}: The difference between estimated and ground truth poses, measured as rotational error (degrees) and translational error (mm).
+    
+    \item \textbf{Target Registration Error (TRE)}: The Euclidean distance between corresponding points after registration, measured at anatomical landmarks.
+    
+    \item \textbf{Surface Distance}: The average distance between corresponding surface points, providing a measure of geometric alignment.
+    
+    \item \textbf{Vessel Overlay Accuracy}: Quantitative assessment of the alignment of vascular structures, which are important landmarks for neurosurgical navigation.
+\end{itemize}
+
+\subsection{Image Similarity Metrics}
+
+We assess the quality of image matching using various similarity metrics:
+
+\begin{itemize}
+    \item \textbf{Normalized Cross-Correlation (NCC)}: Measuring the linear correlation between images.
+    
+    \item \textbf{Mutual Information (MI)}: Quantifying the statistical dependence between images.
+    
+    \item \textbf{Structural Similarity Index (SSIM)}: Evaluating the preservation of structural information.
+    
+    \item \textbf{Peak Signal-to-Noise Ratio (PSNR)}: Measuring the fidelity of image reconstruction.
+\end{itemize}
+
+\subsection{Optimization Behavior Metrics}
+
+We analyze the optimization process using the following metrics:
+
+\begin{itemize}
+    \item \textbf{Convergence Rate}: The number of iterations required to reach a specified accuracy threshold.
+    
+    \item \textbf{Optimization Stability}: The variance of the optimization trajectory across multiple runs.
+    
+    \item \textbf{Capture Range}: The maximum initial misalignment from which the registration can successfully converge.
+    
+    \item \textbf{Gradient Properties}: Analysis of gradient magnitude and direction during optimization.
+\end{itemize}
+
+\subsection{Computational Efficiency Metrics}
+
+We evaluate the computational efficiency of different approaches:
+
+\begin{itemize}
+    \item \textbf{Execution Time}: The time required for registration, measured in seconds or iterations.
+    
+    \item \textbf{Memory Usage}: The peak memory consumption during registration.
+    
+    \item \textbf{Scaling Behavior}: How performance scales with image resolution and model complexity.
+\end{itemize}
+
+\section{Experimental Scenarios}
+
+We evaluate our approach in several clinically relevant scenarios:
+
+\subsection{Standard Registration Scenario}
+
+The basic scenario involves registering preoperative MRI to intraoperative images with a clear view of the brain surface:
+
+\begin{itemize}
+    \item \textbf{Initial Alignment}: Moderate initial misalignment (approximately 10° rotation, 10 mm translation).
+    
+    \item \textbf{Surface Visibility}: Good visibility of the brain surface with minimal occlusion.
+    
+    \item \textbf{Lighting Conditions}: Standard operating room lighting without significant shadows or highlights.
+\end{itemize}
+
+\subsection{Challenging Clinical Scenarios}
+
+We also test our approach in more challenging scenarios:
+
+\begin{itemize}
+    \item \textbf{Partial View Scenario}: Registration with partial visibility of the brain surface due to surgical tools or limited craniotomy size.
+    
+    \item \textbf{Variable Lighting Scenario}: Registration under varying lighting conditions, including shadows, specular highlights, and color casts.
+    
+    \item \textbf{Brain Shift Scenario}: Registration in the presence of brain shift, simulated by deforming the brain surface model.
+    
+    \item \textbf{Poor Initialization Scenario}: Registration with large initial misalignment (20° rotation, 20 mm translation).
+\end{itemize}
+
+\section{Ablation Studies}
+
+To understand the contribution of individual components, we conduct the following ablation studies:
+
+\begin{itemize}
+    \item \textbf{Loss Function Components}: Evaluating the impact of different loss function components and their combinations.
+    
+    \item \textbf{Style Encoding Features}: Assessing the contribution of different style encoding methods and their combinations.
+    
+    \item \textbf{Optimization Strategies}: Comparing different optimization strategies for joint pose and style parameter estimation.
+    
+    \item \textbf{NeRF Architectures}: Testing how different NeRF architectures affect registration performance.
+\end{itemize}
+
+\section{Statistical Analysis}
+
+To ensure the validity of our findings, we employ the following statistical methods:
+
+\begin{itemize}
+    \item \textbf{Significance Testing}: Using appropriate statistical tests (e.g., t-tests, ANOVA) to determine the significance of performance differences.
+    
+    \item \textbf{Confidence Intervals}: Reporting confidence intervals for key performance metrics.
+    
+    \item \textbf{Effect Size Analysis}: Quantifying the magnitude of improvements using standardized effect size measures.
+    
+    \item \textbf{Correlation Analysis}: Investigating relationships between different performance metrics and experimental parameters.
+\end{itemize}
+
+\section{Summary}
+
+This chapter has outlined the comprehensive experimental methodology used to evaluate the contributions of this thesis. The use of both synthetic and clinical datasets, along with a wide range of evaluation metrics and experimental scenarios, enables a thorough assessment of the proposed approaches for enhancing NeRF-based intraoperative registration through loss function exploration and style transfer techniques.
+
+The results of these experiments are presented and analyzed in the next chapter, providing insights into the effectiveness of different approaches and their potential for improving neurosurgical navigation. 

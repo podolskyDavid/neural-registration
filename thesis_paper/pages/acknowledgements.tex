@@ -1,0 +1,44 @@
+\makeatletter
+\ifthenelse{\pdf@strcmp{\languagename}{english}=0}
+{\addcontentsline{toc}{chapter}{Acknowledgments}}
+{\addcontentsline{toc}{chapter}{Danksagungen}}
+\makeatother
+\thispagestyle{empty}
+
+\vspace*{20mm}
+
+\begin{center}
+\makeatletter
+\ifthenelse{\pdf@strcmp{\languagename}{english}=0}
+{\usekomafont{section} Acknowledgments}
+{\usekomafont{section} Danksagungen}
+\makeatother
+\end{center}
+
+\vspace{10mm}
+
+\chapter*{Acknowledgements}
+
+I would like to express my sincere gratitude to everyone who supported me throughout the journey of completing this thesis.
+
+First and foremost, I would like to thank my supervisor, Prof. Dr. Nassir Navab, for providing me with the opportunity to work on this exciting research topic at the Computer Aided Medical Procedures (CAMP) chair. His guidance, expertise, and vision in the field of medical image computing have been invaluable to this work.
+
+I am deeply grateful to my advisor, Maximilian Fehrentz, for his continuous support, patience, and mentorship. His pioneering work on cross-modal neural rendering for intraoperative registration laid the foundation for this thesis, and his detailed feedback and insightful discussions have significantly shaped and improved my research.
+
+I would also like to extend my appreciation to the entire CAMP team for creating a collaborative and stimulating research environment. The weekly seminars, discussions, and exchange of ideas have been incredibly helpful in refining my approach and broadening my perspective.
+
+Special thanks to the clinical partners at the University Hospital for providing access to the clinical datasets used in this research and for sharing their valuable medical expertise. Their insights into the practical challenges of neurosurgical navigation have been essential in guiding this work toward clinical relevance.
+
+I am thankful to my fellow students and friends who have contributed to this work through technical discussions, proofreading, and moral support. Their camaraderie made the challenging moments more bearable and the successes more enjoyable.
+
+Finally, I would like to express my heartfelt gratitude to my family for their unwavering support, encouragement, and understanding throughout my academic journey. Their belief in me has been a constant source of motivation.
+
+This thesis was partially supported by the Technical University of Munich and the CAMP chair, which provided the computational resources and academic environment necessary for this research.
+
+\vspace{1cm}
+\begin{flushright}
+David\\
+Munich, September 2023
+\end{flushright}
+
+\cleardoublepage{}
