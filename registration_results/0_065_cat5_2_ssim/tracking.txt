@@ -1,7 +1,7 @@
 {
   "experiment_name": "0_065_cat5_2_ssim",
-  "final_loss": 0.0037757158279418945,
-  "best_loss": 0.0036537647247314453,
-  "time_elapsed": 64.38915538787842,
+  "final_loss": 0.003761768341064453,
+  "best_loss": 0.003638744354248047,
+  "time_elapsed": 63.561331033706665,
   "iterations": 5
 }
